@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<title>Panchang - The Hindu Calendar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Tithi, nakshatra, Rahu Kaal and every vrat, worked out for your city each morning. Free, no ads, works offline, in 8 Indian languages.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Panchang - The Hindu Calendar">
+<meta property="og:description" content="हर दिन, शुभ दिन · Every day, an auspicious day. Tithi, Rahu Kaal and every vrat for your city. Free, no ads, works offline.">
+<meta property="og:url" content="https://hinducalendar.github.io">
+<meta property="og:image" content="https://hinducalendar.github.io/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Panchang - The Hindu Calendar">
+<meta name="twitter:description" content="Tithi, Rahu Kaal and every vrat for your city. Free, no ads, works offline.">
+<meta name="twitter:image" content="https://hinducalendar.github.io/assets/og.jpg">
+<meta name="theme-color" content="#160A12">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Tiro+Devanagari+Hindi&display=swap">
+<style>
+/* Layout: one day of sky behind the page. Each section declares the hour it sits in (data-sky);
+   the fixed sky cross-fades between hours as you scroll, the sun travels the arc,
+   and text colour follows the section's own hour, so it is always legible. */
+:root {
+  --night: #120814;
+  --night-2: #2A0B16;
+  --indigo: #1E1446;
+  --maroon: #5C1A1B;
+  --maroon-2: #7A2324;
+  --gold: #E8C066;
+  --gold-hi: #F4CF7A;
+  --saffron: #F59E2E;
+  --cream: #FFF8EC;
+  --ink: #2A1A12;
+  --ink-soft: #5A4336;
+  --good: #0F6E5E;
+  --avoid: #A5341B;
+  --display: "Tiro Devanagari Hindi", "Noto Serif Devanagari", Georgia, "Times New Roman", serif;
+  --body: "Mukta", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--night); color: var(--cream);
+  font: 400 19px/1.6 var(--body); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--night); }
+img { max-width: 100%; display: block; }
+html:not(.js) [data-sky="dawn"], html:not(.js) [data-sky="day"] { background: var(--cream); }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--gold-hi); outline-offset: 3px; border-radius: 6px; }
+[data-sky="dawn"] :focus-visible, [data-sky="day"] :focus-visible, .trust :focus-visible { outline-color: var(--maroon); }
+.wrap { width: 100%; max-width: 1140px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; letter-spacing: -0.005em; }
+p { margin: 0; }
+.kicker { font: 600 15px/1.2 var(--body); letter-spacing: 0.14em; text-transform: uppercase; }
+:lang(hi) .kicker { letter-spacing: 0.02em; font-size: 17px; }
+
+/* ---------- the sky ---------- */
+.sky { position: fixed; inset: 0; z-index: -2; pointer-events: none; }
+.sky > i { position: absolute; inset: 0; opacity: 0; will-change: opacity; }
+.sky .h-night { opacity: 1; background: radial-gradient(120% 80% at 70% 0%, #3A1030 0%, #1A0A1C 45%, #0C0610 100%); }
+.sky .h-predawn { background: linear-gradient(180deg, #120E33 0%, #2B1C55 50%, #4E2C5E 85%, #6A3558 100%); }
+.sky .h-dawn { background: linear-gradient(180deg, #F6C68E 0%, #FBDDB0 40%, #FFEFD6 100%); }
+.sky .h-day { background: linear-gradient(180deg, #FFF3DA 0%, #FFF8EC 55%, #FCEFD8 100%); }
+.sky .h-dusk { background: linear-gradient(180deg, #2A1036 0%, #5A1A36 45%, #7E2A2C 80%, #93391F 100%); }
+.orb { position: fixed; z-index: -1; pointer-events: none; top: 0; left: 0; will-change: transform, opacity; }
+.orb.sun { width: 160px; height: 160px; border-radius: 50%;
+  background: radial-gradient(circle at 42% 40%, #FFFBEA 0%, #FFE08A 26%, #FDB648 46%, rgba(253,182,72,.35) 60%, rgba(253,182,72,0) 71%); }
+
+/* ---------- header ---------- */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; transition: background-color .4s, box-shadow .4s; }
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; }
+.top.solid { background: rgba(18, 8, 20, 0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 1px 0 rgba(232,192,102,.18); }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--cream); }
+.brand-mark { width: 40px; height: 40px; border-radius: 11px; overflow: hidden; flex: none; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.brand-name { font: 400 22px/1 var(--display); white-space: nowrap; }
+@media (max-width: 400px) { .top .wrap { gap: 8px; } .brand { gap: 8px; } .brand-name { font-size: 18px; } .brand-mark { width: 36px; height: 36px; } .top-actions { gap: 6px; } .lang button { padding: 9px 8px; min-width: 40px; } }
+.brand-name small { display: block; font: 500 13px/1.3 var(--body); color: var(--gold); letter-spacing: .02em; }
+.top-actions { display: flex; align-items: center; gap: 10px; }
+.lang { display: inline-flex; border: 1px solid rgba(232,192,102,.45); border-radius: 999px; padding: 3px; background: rgba(18,8,20,.35); }
+.lang button { appearance: none; border: 0; background: transparent; color: var(--cream); font: 600 16px/1 var(--body); padding: 9px 13px; border-radius: 999px; cursor: pointer; min-width: 46px; min-height: 40px; }
+.lang button[aria-pressed="true"] { background: var(--gold); color: var(--maroon); }
+.btn-install { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; background: var(--gold); color: var(--maroon); font: 700 16px/1 var(--body); padding: 12px 16px; border-radius: 999px; min-height: 44px; }
+.btn-install svg { width: 18px; height: 18px; }
+@media (max-width: 560px) { .btn-install span { display: none; } .btn-install { padding: 12px; } .brand-name small { display: none; } }
+
+/* ---------- sections ---------- */
+section { position: relative; padding-block: clamp(64px, 10vw, 128px); scroll-margin-top: 64px; }
+[data-sky="dawn"], [data-sky="day"] { color: var(--ink); }
+[data-sky="dawn"] .kicker, [data-sky="day"] .kicker { color: var(--maroon-2); }
+[data-sky="night"] .kicker, [data-sky="predawn"] .kicker, [data-sky="dusk"] .kicker { color: var(--gold); }
+.rise { transform: translateY(18px); transition: transform .9s cubic-bezier(.2,.7,.2,1); }
+.rise.in { transform: none; }
+
+/* hero */
+.hero { padding-block: clamp(28px, 6vw, 72px) clamp(64px, 9vw, 112px); }
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(32px, 5vw, 72px); align-items: center; }
+.hero-copy { min-width: 0; }
+.diya { width: 158px; height: 132px; margin: 0 0 10px -10px; position: relative; overflow: visible; }
+.diya .flame { transform-origin: 171px 94px; animation: flicker 1.1s ease-in-out infinite alternate; }
+.diya .halo { transform-origin: 171px 70px; animation: breathe 3.6s ease-in-out infinite alternate; }
+@keyframes flicker { 0% { transform: scale(.94, .9) rotate(-2deg); } 40% { transform: scale(1.02, 1.06) rotate(1.5deg); } 70% { transform: scale(.97, .98) rotate(-1deg); } 100% { transform: scale(1.03, 1.08) rotate(2deg); } }
+@keyframes breathe { from { opacity: .7; transform: scale(.92); } to { opacity: 1; transform: scale(1.06); } }
+.hero h1 { font-size: clamp(46px, 7.4vw, 92px); line-height: 1.08; color: var(--gold-hi); }
+.hero .sub-title { font: 400 clamp(22px, 2.6vw, 30px)/1.3 var(--display); color: var(--cream); margin-top: 10px; opacity: .92; }
+.hero .lead { font-size: clamp(19px, 1.8vw, 22px); line-height: 1.6; color: #F3E3CC; margin-top: 22px; max-width: 34ch; }
+.ctas { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin-top: 30px; }
+.play { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; background: linear-gradient(180deg, #F4CF7A, #E0B24E); color: var(--maroon); border-radius: 16px; padding: 10px 22px 10px 16px; min-height: 62px; box-shadow: 0 10px 30px -8px rgba(232,192,102,.55), inset 0 1px 0 rgba(255,255,255,.5); transition: transform .2s; }
+.play:hover { transform: translateY(-2px); }
+.play svg { width: 26px; height: 26px; flex: none; }
+.play .t1 { display: block; font: 600 13px/1.1 var(--body); letter-spacing: .04em; text-transform: uppercase; opacity: .85; }
+.play .t2 { display: block; font: 600 23px/1.1 "Mukta", system-ui, sans-serif; letter-spacing: -.01em; }
+.soon { display: flex; align-items: center; gap: 8px; font-size: 17px; color: #E9D3B4; }
+.soon svg { width: 18px; height: 18px; opacity: .8; }
+.fine { margin-top: 18px; font-size: 17px; color: var(--gold); letter-spacing: .01em; }
+
+/* live card */
+.live { position: relative; border-radius: 28px; padding: 26px clamp(20px, 3vw, 30px) 22px; color: var(--cream);
+  background: linear-gradient(170deg, rgba(92,26,27,.92) 0%, rgba(58,15,16,.94) 100%);
+  border: 1px solid rgba(232,192,102,.35); box-shadow: 0 30px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,243,220,.08); }
+.live-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.live-label { font-size: 16px; color: #E9D3B4; }
+.city { position: relative; display: inline-flex; align-items: center; }
+.city select { appearance: none; -webkit-appearance: none; background: rgba(255,243,220,.08); color: var(--cream); border: 1px solid rgba(232,192,102,.45); border-radius: 999px; padding: 8px 36px 8px 34px; font: 600 17px/1.2 var(--body); min-height: 42px; cursor: pointer; max-width: 220px; }
+.city select option { color: #2A1A12; }
+.city .pin { position: absolute; left: 12px; width: 16px; height: 16px; pointer-events: none; color: var(--gold); }
+.city .chev { position: absolute; right: 12px; width: 14px; height: 14px; pointer-events: none; color: var(--gold); }
+.live-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center; margin-top: 18px; }
+.live-moon { width: 108px; height: 108px; }
+.live-date { font-size: 16px; color: #E9D3B4; }
+.live-tithi { font: 400 clamp(32px, 3.6vw, 42px)/1.15 var(--display); color: var(--gold-hi); }
+.live-nak { font-size: 18px; color: #F3E3CC; }
+.verdict { display: flex; gap: 12px; align-items: flex-start; margin-top: 20px; padding: 14px 16px; border-radius: 16px; background: rgba(15,110,94,.22); border: 1px solid rgba(143,220,207,.35); }
+.verdict.avoid { background: rgba(165,52,27,.25); border-color: rgba(245,167,131,.45); }
+.verdict.neutral { background: rgba(255,243,220,.07); border-color: rgba(232,192,102,.3); }
+.verdict .dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 9px; flex: none; background: #8FDCCF; box-shadow: 0 0 0 6px rgba(143,220,207,.18); animation: pulse 2.4s ease-in-out infinite; }
+.verdict.avoid .dot { background: #F5A783; box-shadow: 0 0 0 6px rgba(245,167,131,.18); }
+.verdict.neutral .dot { background: var(--gold); box-shadow: 0 0 0 6px rgba(232,192,102,.16); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 10px rgba(255,255,255,0); } }
+.verdict b { display: block; font: 600 20px/1.3 var(--body); }
+.verdict span { display: block; font-size: 16px; color: #F3E3CC; }
+.live-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.live-times div { background: rgba(255,243,220,.06); border-radius: 14px; padding: 10px 12px; min-width: 0; }
+.live-times dt { font-size: 14px; color: #E9D3B4; }
+.live-times dd { margin: 2px 0 0; font: 600 18px/1.25 var(--body); font-variant-numeric: tabular-nums; }
+.live-note { margin-top: 14px; font-size: 14px; color: #D9C2A2; }
+
+/* good time / ruler */
+.question { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 72px); align-items: center; }
+.question h2 { font-size: clamp(38px, 5.4vw, 64px); line-height: 1.12; color: var(--cream); margin-top: 14px; }
+.question p { font-size: clamp(19px, 1.7vw, 21px); color: #E8DCF2; margin-top: 18px; max-width: 40ch; }
+.ruler { background: rgba(12, 8, 34, .45); border: 1px solid rgba(201,180,255,.22); border-radius: 24px; padding: 24px clamp(16px, 2.6vw, 28px); }
+.ruler-title { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 16px; color: #D9CDF0; }
+.ruler-title b { color: var(--cream); font-weight: 600; }
+.day-list { list-style: none; margin: 16px 0 0; padding: 0; position: relative; }
+.day-list li { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 2px 14px; align-items: center; padding: 11px 12px 11px 10px; border-radius: 14px; }
+.day-list .mk { grid-column: 1; grid-row: 1 / span 2; width: 24px; height: 24px; display: grid; place-items: center; }
+.day-list .mk i { width: 12px; height: 12px; border-radius: 50%; background: #D9CDF0; }
+.day-list .good .mk i { background: #7FD8C4; } .day-list .avoid .mk i { background: #F59B78; }
+.day-list .sun .mk svg { width: 22px; height: 22px; color: #FFD27A; }
+.day-list .nm { grid-column: 2; grid-row: 1; font: 600 19px/1.25 var(--body); color: var(--cream); }
+.day-list .tm { grid-column: 2; grid-row: 2; font-size: 16px; color: #D9CDF0; font-variant-numeric: tabular-nums; }
+.day-list .sun .nm { font-weight: 500; color: #E8DCF2; }
+.day-list .tag { grid-column: 3; grid-row: 1 / span 2; align-self: center; font: 600 14px/1 var(--body); padding: 6px 10px; border-radius: 999px; white-space: nowrap; }
+.day-list .good .tag { color: #A9EBDD; background: rgba(59, 179, 154, .16); border: 1px solid rgba(127, 216, 196, .4); }
+.day-list .avoid .tag { color: #FFC3A9; background: rgba(224, 107, 74, .16); border: 1px solid rgba(245, 155, 120, .45); }
+.day-list .past .nm, .day-list .past .tm { color: #B5A9CF; }
+.day-list .past .tag { opacity: .75; }
+.day-list li.on { background: rgba(255, 243, 220, .09); box-shadow: inset 0 0 0 1px rgba(232, 192, 102, .45); }
+.day-list .on .tm b { color: var(--gold-hi); font-weight: 700; margin-left: 6px; }
+.day-list .now-line { display: flex; align-items: center; gap: 14px; padding: 2px 12px 2px 10px; }
+.day-list .now-line i { width: 24px; display: grid; place-items: center; }
+.day-list .now-line i::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--gold-hi); box-shadow: 0 0 0 4px rgba(244, 207, 122, .25); }
+.day-list .now-line span { font: 700 15px/1 var(--body); color: var(--gold-hi); white-space: nowrap; }
+.day-list .now-line::after { content: ""; flex: 1; height: 1px; background: rgba(244, 207, 122, .5); }
+
+/* moments */
+.moments { display: grid; gap: clamp(72px, 10vw, 128px); }
+.moment { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(28px, 6vw, 88px); align-items: center; }
+.moment.flip .phone { order: 2; }
+.moment h2 { font-size: clamp(34px, 4.6vw, 54px); line-height: 1.14; color: var(--maroon); margin-top: 12px; }
+.moment p { font-size: clamp(19px, 1.7vw, 21px); color: var(--ink-soft); margin-top: 16px; max-width: 38ch; }
+.moment .detail { margin-top: 22px; padding-left: 16px; border-left: 3px solid var(--gold); font: 400 18px/1.55 var(--body); color: var(--ink); max-width: 38ch; }
+.scripts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; font-size: 22px; color: var(--maroon); line-height: 1.3; }
+.scripts span { white-space: nowrap; padding: 7px 16px 8px; border-radius: 999px; background: rgba(255, 252, 245, .85); border: 1px solid rgba(201, 138, 48, .45); box-shadow: 0 2px 8px -4px rgba(92, 26, 27, .3); }
+.phone { justify-self: center; width: min(300px, 78vw); aspect-ratio: 540 / 1200; border-radius: 42px; padding: 10px; background: linear-gradient(145deg, #3A2A26, #120A08); box-shadow: 0 40px 70px -20px rgba(60, 20, 10, .45), 0 0 0 1px rgba(0,0,0,.4), inset 0 0 0 2px rgba(255,255,255,.06); position: relative; }
+.phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 33px; background: #FFF8EC; }
+.phone::after { content: ""; position: absolute; top: 18px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #0A0605; box-shadow: inset 0 0 0 2px #1E1512; }
+
+/* gallery */
+.gallery-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; }
+.gallery-head h2 { font-size: clamp(32px, 4.2vw, 48px); color: var(--maroon); line-height: 1.15; max-width: 18ch; margin-top: 10px; }
+.gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(24px, 4vw, 56px); margin-top: 44px; }
+.shot { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: center; }
+.shot .phone { width: min(210px, 42vw); border-radius: 32px; padding: 8px; }
+.shot .phone img { border-radius: 25px; }
+.shot h3 { font-size: 28px; color: var(--maroon); line-height: 1.2; }
+.shot p { font-size: 18px; color: var(--ink-soft); margin-top: 8px; }
+
+/* trust */
+.trust { margin-top: clamp(64px, 9vw, 112px); padding: clamp(20px, 3vw, 28px) clamp(16px, 3vw, 32px); border-radius: 22px; background: #FFF8EC; border: 1px solid rgba(232, 192, 102, .55); box-shadow: 0 14px 40px -18px rgba(92, 26, 27, .35); }
+.trust ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px 12px; }
+.trust li { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; font: 600 clamp(17px, 1.5vw, 19px)/1.3 var(--body); color: var(--maroon); }
+.trust .ic { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, #FCEBC4, #F4D592); box-shadow: inset 0 0 0 1px rgba(201, 138, 48, .45); color: var(--maroon); flex: none; }
+.trust .ic svg { width: 26px; height: 26px; }
+
+/* festivals */
+.fest h2 { font-size: clamp(36px, 5vw, 58px); color: var(--cream); line-height: 1.12; margin-top: 12px; }
+.fest .sub { font-size: 19px; color: #FFE2C6; margin-top: 12px; }
+.fest-list { list-style: none; padding: 0; margin: 36px 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.fest-list li { background: rgba(24, 8, 18, .5); border: 1px solid rgba(255, 210, 160, .28); border-radius: 22px; padding: 20px 20px 18px; min-width: 0; }
+.fest-date { display: flex; align-items: baseline; gap: 10px; }
+.fest-date b { font: 400 48px/1 var(--display); color: var(--gold-hi); }
+.fest-date span { font-size: 16px; color: #FFE2C6; line-height: 1.25; }
+.fest-name { font: 600 21px/1.3 var(--body); margin-top: 12px; color: #FFF3DC; }
+.fest-when { font-size: 16px; color: #FFD3AE; margin-top: 4px; }
+
+/* closing */
+.closing { text-align: center; padding-block: clamp(80px, 12vw, 150px) 48px; }
+.closing .diya-big { display: flex; justify-content: center; margin: 0 auto 18px; }
+.closing .diya-big .diya { width: 192px; height: 160px; margin: 0; }
+.closing h2 { font-size: clamp(42px, 6.4vw, 78px); line-height: 1.1; color: var(--gold-hi); }
+.closing p { font-size: 20px; color: #EAD9C2; margin: 16px auto 0; max-width: 34ch; }
+.closing .ctas { justify-content: center; }
+footer { padding-block: 40px calc(32px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(232,192,102,.18); color: #CDB79A; font-size: 16px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; align-items: center; }
+footer nav { display: flex; flex-wrap: wrap; gap: 10px 24px; }
+footer a { color: #F3E3CC; text-decoration-color: rgba(232,192,102,.5); text-underline-offset: 3px; }
+.mail { user-select: all; }
+
+/* small screens */
+@media (max-width: 880px) {
+  .hero .wrap, .question, .moment, .gallery { grid-template-columns: minmax(0, 1fr); }
+  .moment.flip .phone { order: 0; }
+  .fest-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero .lead { max-width: none; }
+}
+@media (max-width: 880px) {
+  /* phones and small tablets: copy before the screenshot, straight solid header, lighter effects */
+  .top.solid { background: rgba(18, 8, 20, 0.96); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .moment .phone, .moment.flip .phone { order: 2; }
+  .moment { gap: 32px; }
+  .moment p, .moment .detail { max-width: none; }
+  .gallery { gap: 56px; }
+  .shot { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .shot .phone { order: 2; width: min(260px, 70vw); justify-self: center; }
+  .question p { max-width: none; }
+  .trust ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .live { box-shadow: 0 18px 40px rgba(0,0,0,.4); }
+}
+@media (max-width: 520px) {
+  body { font-size: 18px; }
+  section { padding-block: 56px; }
+  .hero { padding-block: 16px 56px; }
+  .hero .wrap { gap: 28px; }
+  .diya { width: 110px; height: 92px; margin-bottom: 4px; }
+  .hero h1 { font-size: 44px; }
+  .hero .lead { margin-top: 16px; }
+  .ctas { margin-top: 24px; gap: 12px 18px; }
+  .play { width: 100%; justify-content: center; }
+  .live { border-radius: 24px; padding: 20px 18px 18px; }
+  .live-body { gap: 14px; margin-top: 14px; }
+  .live-moon { width: 80px; height: 80px; }
+  .live-tithi { font-size: 32px; }
+  .live-nak { font-size: 17px; }
+  .city select { max-width: 180px; font-size: 16px; }
+  .live-times { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .live-times div:last-child { grid-column: 1 / -1; }
+  .question h2 { font-size: 36px; }
+  .ruler { padding: 18px 14px; border-radius: 20px; }
+  .day-list li { grid-template-columns: 24px minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 8px; }
+  .day-list .nm { grid-column: 2 / span 2; }
+  .day-list .tag { grid-column: 3; grid-row: 2; font-size: 13px; padding: 5px 9px; }
+  .moments { gap: 72px; }
+  .moment h2 { font-size: 32px; }
+  .phone { width: min(280px, 76vw); border-radius: 38px; }
+  .phone img { border-radius: 30px; }
+  .gallery-head h2 { font-size: 30px; }
+  .gallery { margin-top: 32px; }
+  .trust ul { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 10px; }
+  .trust li { flex-direction: row; text-align: left; gap: 10px; font-size: 17px; }
+  .trust .ic { width: 42px; height: 42px; } .trust .ic svg { width: 22px; height: 22px; }
+  .fest h2 { font-size: 34px; }
+  .fest-list { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 26px; }
+  .fest-list li { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 14px 16px; border-radius: 18px; }
+  .fest-date { flex-direction: column; align-items: flex-start; gap: 2px; grid-row: span 2; }
+  .fest-date b { font-size: 38px; }
+  .fest-date span { font-size: 14px; }
+  .fest-name { margin-top: 0; font-size: 19px; }
+  .fest-when { margin-top: 0; }
+  .closing { padding-block: 72px 40px; }
+  .closing .diya-big .diya { width: 144px; height: 120px; }
+  .closing h2 { font-size: 40px; }
+  footer .wrap { flex-direction: column; align-items: flex-start; }
+  .orb.sun { width: 120px; height: 120px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .diya .flame, .diya .halo, .verdict .dot { animation: none; }
+  .rise { transform: none; transition: none; }
+  .orb { display: none; }
+}
+</style>
+
+<script>document.documentElement.classList.add('js');</script>
+<div class="sky" aria-hidden="true"><i class="h-night"></i><i class="h-predawn"></i><i class="h-dawn"></i><i class="h-day"></i><i class="h-dusk"></i></div>
+<div class="orb sun" id="sun" aria-hidden="true"></div>
+
+<header class="top" id="top">
+  <div class="wrap">
+    <a class="brand" href="#hero" aria-label="Panchang - The Hindu Calendar">
+      <!-- APP_ICON: swap this one image for the final app icon -->
+      <img class="brand-mark" id="app-icon" src="assets/icon.svg" alt="" width="40" height="40">
+      <span class="brand-name"><span data-i="brand">Panchang</span><small data-i="brandOther">The Hindu Calendar</small></span>
+    </a>
+    <div class="top-actions">
+      <div class="lang" role="group" aria-label="Language / भाषा">
+        <button type="button" id="lang-en" data-lang="en" aria-pressed="true" aria-label="English" lang="en">EN</button>
+        <button type="button" id="lang-hi" data-lang="hi" aria-pressed="false" aria-label="हिन्दी" lang="hi">हिं</button>
+      </div>
+      <a class="btn-install play-link" href="https://play.google.com/store/apps/details?id=com.panchang.hinducalendar" aria-label="Install Panchang - The Hindu Calendar from Google Play">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3.5v17a1 1 0 0 0 1.5.86l14.2-8.5a1 1 0 0 0 0-1.72L6.5 2.64A1 1 0 0 0 5 3.5z"/></svg>
+        <span data-i="install">Install</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="hero" data-sky="night">
+    <div class="wrap">
+      <div class="hero-copy">
+        <svg class="diya" viewBox="0 0 240 200" aria-hidden="true">
+          <defs>
+            <radialGradient id="dh" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFD27A" stop-opacity=".7"/><stop offset=".45" stop-color="#F59E2E" stop-opacity=".22"/><stop offset="1" stop-color="#F59E2E" stop-opacity="0"/></radialGradient>
+            <linearGradient id="db" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE29A"/><stop offset=".35" stop-color="#EDB34A"/><stop offset=".75" stop-color="#B8741F"/><stop offset="1" stop-color="#7A4510"/></linearGradient>
+            <linearGradient id="ds" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".28"/><stop offset=".3" stop-color="#000" stop-opacity="0"/><stop offset=".7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient>
+            <linearGradient id="dr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF1C4"/><stop offset="1" stop-color="#D99A35"/></linearGradient>
+            <radialGradient id="do" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#8A4B12"/><stop offset="1" stop-color="#3B1B06"/></radialGradient>
+            <radialGradient id="df" cx="50%" cy="78%" r="75%"><stop offset="0" stop-color="#FFFBE6"/><stop offset=".3" stop-color="#FFD34D"/><stop offset=".65" stop-color="#FF9524"/><stop offset="1" stop-color="#E2481B"/></radialGradient>
+            <radialGradient id="dc" cx="50%" cy="80%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#FFE680"/></radialGradient>
+          </defs>
+          <circle class="halo" cx="171" cy="70" r="62" fill="url(#dh)"/>
+          <path d="M82 148H118L124 166C112 170 88 170 76 166Z" fill="#C98A30"/>
+          <path d="M34 110C36 138 62 156 100 156C134 156 158 140 166 118L182 102C170 104 160 106 152 108Z" fill="url(#db)"/>
+          <path d="M34 110C36 138 62 156 100 156C134 156 158 140 166 118L182 102C170 104 160 106 152 108Z" fill="url(#ds)"/>
+          <g fill="#FFE7A8" opacity=".85"><circle cx="56" cy="131" r="2"/><circle cx="72" cy="135" r="2"/><circle cx="88" cy="137" r="2"/><circle cx="104" cy="137" r="2"/><circle cx="120" cy="136" r="2"/><circle cx="136" cy="133" r="2"/><circle cx="150" cy="128" r="2"/></g>
+          <ellipse cx="95" cy="110" rx="61" ry="13" fill="url(#dr)"/>
+          <ellipse cx="95" cy="111" rx="53" ry="8.5" fill="url(#do)"/>
+          <path d="M150 108L180 102L164 112Z" fill="url(#dr)"/>
+          <path d="M48 120C52 136 66 147 84 151" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none" opacity=".38"/>
+          <rect x="168" y="92" width="5" height="13" rx="2.5" fill="#2B1408" transform="rotate(18 170 98)"/>
+          <g class="flame"><path d="M171 46C180 58 185 69 181 80C179 88 163 88 161 80C157 69 162 58 171 46Z" fill="url(#df)"/><path d="M171 62C175 69 177 74 175 80C174 84 168 84 167 80C165 74 167 69 171 62Z" fill="url(#dc)"/></g>
+        </svg>
+        <h1 data-i="h1">Every day, an auspicious day.</h1>
+        <p class="sub-title" data-i="h1Other" lang="hi">हर दिन, शुभ दिन</p>
+        <p class="lead" data-i="lead">Tithi, nakshatra, Rahu Kaal and every vrat, worked out for your city each morning, right on your phone.</p>
+        <div class="ctas">
+          <a class="play play-link" href="https://play.google.com/store/apps/details?id=com.panchang.hinducalendar" aria-label="Get it on Google Play">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.5v15a1 1 0 0 0 1.5.86l12.6-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+            <span><span class="t1" data-i="playT1">Get it on</span><span class="t2">Google Play</span></span>
+          </a>
+          <span class="soon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg><span data-i="soon">iPhone app coming soon</span></span>
+        </div>
+        <p class="fine" data-i="fine">Free · No ads · No sign-up</p>
+      </div>
+
+      <aside class="live" id="live" aria-labelledby="live-label">
+        <div class="live-head">
+          <span class="live-label" id="live-label" data-i="liveLabel">Today's panchang for</span>
+          <label class="city">
+            <svg class="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            <select id="city" aria-label="City"></select>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+          </label>
+        </div>
+        <div class="live-body">
+          <div class="live-moon" id="live-moon"></div>
+          <div style="min-width:0">
+            <div class="live-date" id="live-date">Thursday, 19 November</div>
+            <div class="live-tithi" id="live-tithi">Shukla Navami</div>
+            <div class="live-nak" id="live-nak">Kartika month · Purva Bhadrapada nakshatra</div>
+          </div>
+        </div>
+        <div class="verdict neutral" id="verdict" aria-live="polite"><i class="dot"></i><div><b id="verdict-title">Today's timings</b><span id="verdict-line">Open the app for the live verdict.</span></div></div>
+        <dl class="live-times">
+          <div><dt data-i="sunrise">Sunrise</dt><dd id="t-rise">–</dd></div>
+          <div><dt data-i="sunset">Sunset</dt><dd id="t-set">–</dd></div>
+          <div><dt data-i="rahu">Rahu Kaal</dt><dd id="t-rahu">–</dd></div>
+        </dl>
+        <p class="live-note" data-i="liveNote">Calculated in your browser, the same way the app does it on your phone.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section id="good-time" data-sky="predawn">
+    <div class="wrap question">
+      <div class="rise">
+        <p class="kicker" data-i="qKicker">Before you begin</p>
+        <h2 data-i="qTitle">Is this a good time to start?</h2>
+        <p data-i="qBody">It's the question a panchang exists to answer. Panchang answers it the moment you open it: which choghadiya is running, and whether it's Rahu Kaal, Yamaganda or Gulika, for the city you live in.</p>
+      </div>
+      <div class="ruler rise" id="ruler">
+        <div class="ruler-title"><span data-i="rulerTitle">Today, sunrise to sunset</span><b id="ruler-city">Delhi</b></div>
+        <ol class="day-list" id="day-list"></ol>
+      </div>
+    </div>
+  </section>
+
+  <section id="moments" data-sky="dawn">
+    <div class="wrap moments">
+      <article class="moment">
+        <div class="phone rise"><img src="assets/screens/en-today.webp" data-src-en="assets/screens/en-today.webp" data-src-hi="assets/screens/hi-today.webp" data-i-alt="altToday" alt="The Today screen: tithi, nakshatra, a moon, and a card saying whether now is a good time" width="540" height="1200" loading="lazy" decoding="async"></div>
+        <div class="rise">
+          <p class="kicker" data-i="m1Kicker">Every morning</p>
+          <h2 data-i="m1Title">The whole day, at a glance</h2>
+          <p data-i="m1Body">Tithi, nakshatra and month at the top. Sunrise, sunset and Brahma Muhurat below. One look before you leave the house is enough.</p>
+          <p class="detail" data-i="m1Detail">Rahu Kaal, Yamaganda and Gulika are worked out from your city's own sunrise, never from a fixed table.</p>
+        </div>
+      </article>
+      <article class="moment flip" data-sky="day">
+        <div class="phone rise"><img src="assets/screens/en-festival.webp" data-src-en="assets/screens/en-festival.webp" data-src-hi="assets/screens/hi-festival.webp" data-i-alt="altFestival" alt="An Ekadashi page showing when the fast begins and the parana window to break it" width="540" height="1200" loading="lazy" decoding="async"></div>
+        <div class="rise">
+          <p class="kicker" data-i="m2Kicker">Vrat and parana</p>
+          <h2 data-i="m2Title">Keep every vrat, and break it on time</h2>
+          <p data-i="m2Body">A reminder the evening before each Ekadashi, and the exact parana window the next morning, so the fast is kept the way it should be.</p>
+          <p class="detail" data-i="m2Detail">Purnima, Amavasya, Pradosh, Sankashti and the year's festivals too, with what to do and what to avoid on each.</p>
+        </div>
+      </article>
+      <article class="moment" data-sky="day">
+        <div class="phone rise"><img src="assets/screens/en-languages.webp" data-src-en="assets/screens/en-languages.webp" data-src-hi="assets/screens/hi-languages.webp" data-i-alt="altLanguages" alt="Settings with all eight languages to choose from" width="540" height="1200" loading="lazy" decoding="async"></div>
+        <div class="rise">
+          <p class="kicker" data-i="m3Kicker">Your language</p>
+          <h2 data-i="m3Title">In your language, even without internet</h2>
+          <p data-i="m3Body">Everything is calculated on the phone itself, so it works in the temple, on the train, anywhere. Large text for easy reading, and a night theme for the evening aarti.</p>
+          <div class="scripts"><span lang="hi">हिन्दी</span><span>English</span><span lang="mr">मराठी</span><span lang="gu">ગુજરાતી</span><span lang="ta">தமிழ்</span><span lang="te">తెలుగు</span><span lang="kn">ಕನ್ನಡ</span><span lang="bn">বাংলা</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="screens" data-sky="day">
+    <div class="wrap">
+      <div class="gallery-head rise">
+        <div>
+          <p class="kicker" data-i="gKicker">Also inside</p>
+          <h2 data-i="gTitle">A calendar for the month, and a muhurat finder</h2>
+        </div>
+      </div>
+      <div class="gallery">
+        <div class="shot rise">
+          <div class="phone"><img src="assets/screens/en-calendar.webp" data-src-en="assets/screens/en-calendar.webp" data-src-hi="assets/screens/hi-calendar.webp" data-i-alt="altCalendar" alt="The month calendar with each day's tithi and vrats marked" width="540" height="1200" loading="lazy" decoding="async"></div>
+          <div><h3 data-i="g1Title">Every tithi of the month</h3><p data-i="g1Body">Each day shows its tithi. Vrats, Purnima and Amavasya are marked, and any date opens its full panchang.</p></div>
+        </div>
+        <div class="shot rise">
+          <div class="phone"><img src="assets/screens/en-muhurat.webp" data-src-en="assets/screens/en-muhurat.webp" data-src-hi="assets/screens/hi-muhurat.webp" data-i-alt="altMuhurat" alt="The muhurat finder listing good dates for a wedding" width="540" height="1200" loading="lazy" decoding="async"></div>
+          <div><h3 data-i="g2Title">Shubh muhurat, by occasion</h3><p data-i="g2Body">Good dates for a wedding, griha pravesh, a new vehicle or property, naming and mundan, with the reason for each.</p></div>
+        </div>
+      </div>
+      <div class="trust">
+      <ul>
+        <li><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="4.5" rx="1"/><path d="M5 12.5V20h14v-7.5M12 8v12"/><path d="M12 8C10.5 5 7 4.5 7 6.6 7 8 9.5 8 12 8zm0 0c1.5-3 5-3.5 5-1.4C17 8 14.5 8 12 8z"/></svg></span><span data-i="tr1">Free</span></li>
+        <li><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h3l6 4V6l-6 4H4z"/><path d="M16.5 9.5a3.5 3.5 0 0 1 0 5"/><path d="M3 3l18 18"/></svg></span><span data-i="tr2">No ads</span></li>
+        <li><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/><path d="M3 3l18 18"/></svg></span><span data-i="tr3">No sign-up</span></li>
+        <li><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.8a15 15 0 0 1 3.8-2.5M10.2 5.1A15 15 0 0 1 21.5 8.8M5.3 12.2a10 10 0 0 1 3.4-2M15.7 10.4A10 10 0 0 1 18.7 12.2M8.6 15.6a5 5 0 0 1 6.8 0"/><circle cx="12" cy="19" r=".8" fill="currentColor"/><path d="M3 3l18 18"/></svg></span><span data-i="tr4">Works offline</span></li>
+        <li><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/><path d="M9.5 10.5l2 2 3.5-3.5"/></svg></span><span data-i="tr5">Calculated on your phone</span></li>
+        <li><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5h9M8 3.5v2M5.5 5.5c.8 3 3 5.3 6 6.5M10.5 5.5c-.8 3-3 5.5-6.5 7"/><path d="M12.5 21l4-9.5 4 9.5M14 17.5h5"/></svg></span><span data-i="tr6">8 languages</span></li>
+      </ul>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="fest" id="festivals" data-sky="dusk">
+    <div class="wrap">
+      <div class="rise">
+        <p class="kicker" data-i="fKicker">Coming up</p>
+        <h2 id="fest-title">The next vrats and festivals</h2>
+        <p class="sub" data-i="fSub">Dates calculated for your city, the way the app shows them.</p>
+      </div>
+      <ul class="fest-list" id="fest-list"></ul>
+    </div>
+  </section>
+
+  <section class="closing" data-sky="night">
+    <div class="wrap">
+      <div class="diya-big" id="diya-big" aria-hidden="true"></div>
+      <h2 data-i="cTitle">Light the lamp. Begin the day.</h2>
+      <p data-i="cBody">Panchang is free on Android. The iPhone app is coming soon.</p>
+      <div class="ctas">
+        <a class="play play-link" href="https://play.google.com/store/apps/details?id=com.panchang.hinducalendar" aria-label="Get it on Google Play">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.5v15a1 1 0 0 0 1.5.86l12.6-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+          <span><span class="t1" data-i="playT1">Get it on</span><span class="t2">Google Play</span></span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer data-sky="night">
+  <div class="wrap">
+    <nav aria-label="Footer">
+      <a href="privacy.html" data-i="privacy">Privacy policy</a>
+      <a href="https://dailygita.github.io/" id="gita-link"><span data-i="gita">Also from us: Bhagavad Gita Quotes Daily</span></a>
+    </nav>
+    <p><span data-i="contact">Contact</span>: <span class="mail" id="mail">sud_kan2004@yahoo.com</span></p>
+  </div>
+</footer>
+
+<script>
+"use strict";var Panchang=(()=>{var Dt=Object.defineProperty;var on=Object.getOwnPropertyDescriptor;var sn=Object.getOwnPropertyNames;var cn=Object.prototype.hasOwnProperty;var l1=(n,t)=>{for(var e in t)Dt(n,e,{get:t[e],enumerable:!0})},un=(n,t,e,a)=>{if(t&&typeof t=="object"||typeof t=="function")for(let r of sn(t))!cn.call(n,r)&&r!==e&&Dt(n,r,{get:()=>t[r],enumerable:!(a=on(t,r))||a.enumerable});return n};var hn=n=>un(Dt({},"__esModule",{value:!0}),n);var Ye={};l1(Ye,{CITIES:()=>wt,addDays:()=>G,avoidPeriods:()=>u1,computeDay:()=>B0,computeDayLite:()=>m0,diffDays:()=>v0,festivalsForYear:()=>St,getCity:()=>tn,localParts:()=>G0,names:()=>i1,nowStatus:()=>en,todayIn:()=>J1,upcomingFestivals:()=>Z1,weekday:()=>Y0,ymdKey:()=>D0});var Yt=173.1446326846693,Q=14959787069098932e-8;var z=.017453292519943295,d1=.26179938779914946,Z=57.29577951308232,D1=3.819718634205488;var ln=365.24217,f1=new Date("2000-01-01T12:00:00Z"),o0=2*Math.PI,l0=3600*(180/Math.PI),b0=484813681109536e-20,v1=180*60*60,dn=2*v1,m1=7292115e-11,fn=v1/Math.PI,mn=-.17-5*Math.log10(fn),p1=29.530588,jt=24*3600,Be=jt*1e3,pn=.9972695717592592,Mn=695700,gn=Mn/Q,S0=.996647180302104,yn=S0*S0,C0=6378.1366,xn=C0/Q,Qe=C0*S0,Sn=6371,wn=88,We=Sn+wn,An=1738.1,Dn=An/Q;var vn=1736,Xe=vn/Q,kn=34/60,Bt=81.30056,Qt=.0002959122082855911;var _n=8887692390113509e-25;var _t=2825345909524226e-22,Tt=8459715185680659e-23,Et=1292024916781969e-23,bt=1524358900784276e-23;var Ze=_n/Bt;function tt(n){if(n!==!0&&n!==!1)throw console.trace(),`Value is not boolean: ${n}`;return n}function N(n){if(!Number.isFinite(n))throw console.trace(),`Value is not a finite number: ${n}`;return n}function E0(n){return n-Math.floor(n)}function Tn(n,t){let e=n.x*n.x+n.y*n.y+n.z*n.z;if(Math.abs(e)<1e-8)throw"AngleBetween: first vector is too short.";let a=t.x*t.x+t.y*t.y+t.z*t.z;if(Math.abs(a)<1e-8)throw"AngleBetween: second vector is too short.";let r=(n.x*t.x+n.y*t.y+n.z*t.z)/Math.sqrt(e*a);return r<=-1?180:r>=1?0:Z*Math.acos(r)}var p;(function(n){n.Sun="Sun",n.Moon="Moon",n.Mercury="Mercury",n.Venus="Venus",n.Earth="Earth",n.Mars="Mars",n.Jupiter="Jupiter",n.Saturn="Saturn",n.Uranus="Uranus",n.Neptune="Neptune",n.Pluto="Pluto",n.SSB="SSB",n.EMB="EMB",n.Star1="Star1",n.Star2="Star2",n.Star3="Star3",n.Star4="Star4",n.Star5="Star5",n.Star6="Star6",n.Star7="Star7",n.Star8="Star8"})(p||(p={}));var En=[p.Star1,p.Star2,p.Star3,p.Star4,p.Star5,p.Star6,p.Star7,p.Star8],bn=[{ra:0,dec:0,dist:0},{ra:0,dec:0,dist:0},{ra:0,dec:0,dist:0},{ra:0,dec:0,dist:0},{ra:0,dec:0,dist:0},{ra:0,dec:0,dist:0},{ra:0,dec:0,dist:0},{ra:0,dec:0,dist:0}];function Pn(n){let t=En.indexOf(n);return t>=0?bn[t]:null}function Wt(n){let t=Pn(n);return t&&t.dist>0?t:null}var q;(function(n){n[n.From2000=0]="From2000",n[n.Into2000=1]="Into2000"})(q||(q={}));var W={Mercury:[[[[4.40250710144,0,0],[.40989414977,1.48302034195,26087.9031415742],[.050462942,4.47785489551,52175.8062831484],[.00855346844,1.16520322459,78263.70942472259],[.00165590362,4.11969163423,104351.61256629678],[.00034561897,.77930768443,130439.51570787099],[7583476e-11,3.71348404924,156527.41884944518]],[[26087.90313685529,0,0],[.01131199811,6.21874197797,26087.9031415742],[.00292242298,3.04449355541,52175.8062831484],[.00075775081,6.08568821653,78263.70942472259],[.00019676525,2.80965111777,104351.61256629678]]],[[[.11737528961,1.98357498767,26087.9031415742],[.02388076996,5.03738959686,52175.8062831484],[.01222839532,3.14159265359,0],[.0054325181,1.79644363964,78263.70942472259],[.0012977877,4.83232503958,104351.61256629678],[.00031866927,1.58088495658,130439.51570787099],[7963301e-11,4.60972126127,156527.41884944518]],[[.00274646065,3.95008450011,26087.9031415742],[.00099737713,3.14159265359,0]]],[[[.39528271651,0,0],[.07834131818,6.19233722598,26087.9031415742],[.00795525558,2.95989690104,52175.8062831484],[.00121281764,6.01064153797,78263.70942472259],[.00021921969,2.77820093972,104351.61256629678],[4354065e-11,5.82894543774,130439.51570787099]],[[.0021734774,4.65617158665,26087.9031415742],[.00044141826,1.42385544001,52175.8062831484]]]],Venus:[[[[3.17614666774,0,0],[.01353968419,5.59313319619,10213.285546211],[.00089891645,5.30650047764,20426.571092422],[5477194e-11,4.41630661466,7860.4193924392],[3455741e-11,2.6996444782,11790.6290886588],[2372061e-11,2.99377542079,3930.2096962196],[1317168e-11,5.18668228402,26.2983197998],[1664146e-11,4.25018630147,1577.3435424478],[1438387e-11,4.15745084182,9683.5945811164],[1200521e-11,6.15357116043,30639.856638633]],[[10213.28554621638,0,0],[.00095617813,2.4640651111,10213.285546211],[7787201e-11,.6247848222,20426.571092422]]],[[[.05923638472,.26702775812,10213.285546211],[.00040107978,1.14737178112,20426.571092422],[.00032814918,3.14159265359,0]],[[.00287821243,1.88964962838,10213.285546211]]],[[[.72334820891,0,0],[.00489824182,4.02151831717,10213.285546211],[1658058e-11,4.90206728031,20426.571092422],[1378043e-11,1.12846591367,11790.6290886588],[1632096e-11,2.84548795207,7860.4193924392],[498395e-11,2.58682193892,9683.5945811164],[221985e-11,2.01346696541,19367.1891622328],[237454e-11,2.55136053886,15720.8387848784]],[[.00034551041,.89198706276,10213.285546211]]]],Earth:[[[[1.75347045673,0,0],[.03341656453,4.66925680415,6283.0758499914],[.00034894275,4.62610242189,12566.1516999828],[3417572e-11,2.82886579754,3.523118349],[3497056e-11,2.74411783405,5753.3848848968],[3135899e-11,3.62767041756,77713.7714681205],[2676218e-11,4.41808345438,7860.4193924392],[2342691e-11,6.13516214446,3930.2096962196],[1273165e-11,2.03709657878,529.6909650946],[1324294e-11,.74246341673,11506.7697697936],[901854e-11,2.04505446477,26.2983197998],[1199167e-11,1.10962946234,1577.3435424478],[857223e-11,3.50849152283,398.1490034082],[779786e-11,1.17882681962,5223.6939198022],[99025e-10,5.23268072088,5884.9268465832],[753141e-11,2.53339052847,5507.5532386674],[505267e-11,4.58292599973,18849.2275499742],[492392e-11,4.20505711826,775.522611324],[356672e-11,2.91954114478,.0673103028],[284125e-11,1.89869240932,796.2980068164],[242879e-11,.34481445893,5486.777843175],[317087e-11,5.84901948512,11790.6290886588],[271112e-11,.31486255375,10977.078804699],[206217e-11,4.80646631478,2544.3144198834],[205478e-11,1.86953770281,5573.1428014331],[202318e-11,2.45767790232,6069.7767545534],[126225e-11,1.08295459501,20.7753954924],[155516e-11,.83306084617,213.299095438]],[[6283.0758499914,0,0],[.00206058863,2.67823455808,6283.0758499914],[4303419e-11,2.63512233481,12566.1516999828]],[[8721859e-11,1.07253635559,6283.0758499914]]],[[],[[.00227777722,3.4137662053,6283.0758499914],[3805678e-11,3.37063423795,12566.1516999828]]],[[[1.00013988784,0,0],[.01670699632,3.09846350258,6283.0758499914],[.00013956024,3.05524609456,12566.1516999828],[308372e-10,5.19846674381,77713.7714681205],[1628463e-11,1.17387558054,5753.3848848968],[1575572e-11,2.84685214877,7860.4193924392],[924799e-11,5.45292236722,11506.7697697936],[542439e-11,4.56409151453,3930.2096962196],[47211e-10,3.66100022149,5884.9268465832],[85831e-11,1.27079125277,161000.6857376741],[57056e-11,2.01374292245,83996.84731811189],[55736e-11,5.2415979917,71430.69561812909],[174844e-11,3.01193636733,18849.2275499742],[243181e-11,4.2734953079,11790.6290886588]],[[.00103018607,1.10748968172,6283.0758499914],[1721238e-11,1.06442300386,12566.1516999828]],[[4359385e-11,5.78455133808,6283.0758499914]]]],Mars:[[[[6.20347711581,0,0],[.18656368093,5.0503710027,3340.6124266998],[.01108216816,5.40099836344,6681.2248533996],[.00091798406,5.75478744667,10021.8372800994],[.00027744987,5.97049513147,3.523118349],[.00010610235,2.93958560338,2281.2304965106],[.00012315897,.84956094002,2810.9214616052],[8926784e-11,4.15697846427,.0172536522],[8715691e-11,6.11005153139,13362.4497067992],[6797556e-11,.36462229657,398.1490034082],[7774872e-11,3.33968761376,5621.8429232104],[3575078e-11,1.6618650571,2544.3144198834],[4161108e-11,.22814971327,2942.4634232916],[3075252e-11,.85696614132,191.4482661116],[2628117e-11,.64806124465,3337.0893083508],[2937546e-11,6.07893711402,.0673103028],[2389414e-11,5.03896442664,796.2980068164],[2579844e-11,.02996736156,3344.1355450488],[1528141e-11,1.14979301996,6151.533888305],[1798806e-11,.65634057445,529.6909650946],[1264357e-11,3.62275122593,5092.1519581158],[1286228e-11,3.06796065034,2146.1654164752],[1546404e-11,2.91579701718,1751.539531416],[1024902e-11,3.69334099279,8962.4553499102],[891566e-11,.18293837498,16703.062133499],[858759e-11,2.4009381194,2914.0142358238],[832715e-11,2.46418619474,3340.5951730476],[83272e-10,4.49495782139,3340.629680352],[712902e-11,3.66335473479,1059.3819301892],[748723e-11,3.82248614017,155.4203994342],[723861e-11,.67497311481,3738.761430108],[635548e-11,2.92182225127,8432.7643848156],[655162e-11,.48864064125,3127.3133312618],[550474e-11,3.81001042328,.9803210682],[55275e-10,4.47479317037,1748.016413067],[425966e-11,.55364317304,6283.0758499914],[415131e-11,.49662285038,213.299095438],[472167e-11,3.62547124025,1194.4470102246],[306551e-11,.38052848348,6684.7479717486],[312141e-11,.99853944405,6677.7017350506],[293198e-11,4.22131299634,20.7753954924],[302375e-11,4.48618007156,3532.0606928114],[274027e-11,.54222167059,3340.545116397],[281079e-11,5.88163521788,1349.8674096588],[231183e-11,1.28242156993,3870.3033917944],[283602e-11,5.7688543494,3149.1641605882],[236117e-11,5.75503217933,3333.498879699],[274033e-11,.13372524985,3340.6797370026],[299395e-11,2.78323740866,6254.6266625236]],[[3340.61242700512,0,0],[.01457554523,3.60433733236,3340.6124266998],[.00168414711,3.92318567804,6681.2248533996],[.00020622975,4.26108844583,10021.8372800994],[3452392e-11,4.7321039319,3.523118349],[2586332e-11,4.60670058555,13362.4497067992],[841535e-11,4.45864030426,2281.2304965106]],[[.00058152577,2.04961712429,3340.6124266998],[.00013459579,2.45738706163,6681.2248533996]]],[[[.03197134986,3.76832042431,3340.6124266998],[.00298033234,4.10616996305,6681.2248533996],[.00289104742,0,0],[.00031365539,4.4465105309,10021.8372800994],[34841e-9,4.7881254926,13362.4497067992]],[[.00217310991,6.04472194776,3340.6124266998],[.00020976948,3.14159265359,0],[.00012834709,1.60810667915,6681.2248533996]]],[[[1.53033488271,0,0],[.1418495316,3.47971283528,3340.6124266998],[.00660776362,3.81783443019,6681.2248533996],[.00046179117,4.15595316782,10021.8372800994],[8109733e-11,5.55958416318,2810.9214616052],[7485318e-11,1.77239078402,5621.8429232104],[5523191e-11,1.3643630377,2281.2304965106],[382516e-10,4.49407183687,13362.4497067992],[2306537e-11,.09081579001,2544.3144198834],[1999396e-11,5.36059617709,3337.0893083508],[2484394e-11,4.9254563992,2942.4634232916],[1960195e-11,4.74249437639,3344.1355450488],[1167119e-11,2.11260868341,5092.1519581158],[1102816e-11,5.00908403998,398.1490034082],[899066e-11,4.40791133207,529.6909650946],[992252e-11,5.83861961952,6151.533888305],[807354e-11,2.10217065501,1059.3819301892],[797915e-11,3.44839203899,796.2980068164],[740975e-11,1.49906336885,2146.1654164752]],[[.01107433345,2.03250524857,3340.6124266998],[.00103175887,2.37071847807,6681.2248533996],[128772e-9,0,0],[.0001081588,2.70888095665,10021.8372800994]],[[.00044242249,.47930604954,3340.6124266998],[8138042e-11,.86998389204,6681.2248533996]]]],Jupiter:[[[[.59954691494,0,0],[.09695898719,5.06191793158,529.6909650946],[.00573610142,1.44406205629,7.1135470008],[.00306389205,5.41734730184,1059.3819301892],[.00097178296,4.14264726552,632.7837393132],[.00072903078,3.64042916389,522.5774180938],[.00064263975,3.41145165351,103.0927742186],[.00039806064,2.29376740788,419.4846438752],[.00038857767,1.27231755835,316.3918696566],[.00027964629,1.7845459182,536.8045120954],[.0001358973,5.7748104079,1589.0728952838],[8246349e-11,3.5822792584,206.1855484372],[8768704e-11,3.63000308199,949.1756089698],[7368042e-11,5.0810119427,735.8765135318],[626315e-10,.02497628807,213.299095438],[6114062e-11,4.51319998626,1162.4747044078],[4905396e-11,1.32084470588,110.2063212194],[5305285e-11,1.30671216791,14.2270940016],[5305441e-11,4.18625634012,1052.2683831884],[4647248e-11,4.69958103684,3.9321532631],[3045023e-11,4.31676431084,426.598190876],[2609999e-11,1.56667394063,846.0828347512],[2028191e-11,1.06376530715,3.1813937377],[1764763e-11,2.14148655117,1066.49547719],[1722972e-11,3.88036268267,1265.5674786264],[1920945e-11,.97168196472,639.897286314],[1633223e-11,3.58201833555,515.463871093],[1431999e-11,4.29685556046,625.6701923124],[973272e-11,4.09764549134,95.9792272178]],[[529.69096508814,0,0],[.00489503243,4.2208293947,529.6909650946],[.00228917222,6.02646855621,7.1135470008],[.00030099479,4.54540782858,1059.3819301892],[.0002072092,5.45943156902,522.5774180938],[.00012103653,.16994816098,536.8045120954],[6067987e-11,4.42422292017,103.0927742186],[5433968e-11,3.98480737746,419.4846438752],[4237744e-11,5.89008707199,14.2270940016]],[[.00047233601,4.32148536482,7.1135470008],[.00030649436,2.929777887,529.6909650946],[.00014837605,3.14159265359,0]]],[[[.02268615702,3.55852606721,529.6909650946],[.00109971634,3.90809347197,1059.3819301892],[.00110090358,0,0],[8101428e-11,3.60509572885,522.5774180938],[6043996e-11,4.25883108339,1589.0728952838],[6437782e-11,.30627119215,536.8045120954]],[[.00078203446,1.52377859742,529.6909650946]]],[[[5.20887429326,0,0],[.25209327119,3.49108639871,529.6909650946],[.00610599976,3.84115365948,1059.3819301892],[.00282029458,2.57419881293,632.7837393132],[.00187647346,2.07590383214,522.5774180938],[.00086792905,.71001145545,419.4846438752],[.00072062974,.21465724607,536.8045120954],[.00065517248,5.9799588479,316.3918696566],[.00029134542,1.67759379655,103.0927742186],[.00030135335,2.16132003734,949.1756089698],[.00023453271,3.54023522184,735.8765135318],[.00022283743,4.19362594399,1589.0728952838],[.00023947298,.2745803748,7.1135470008],[.00013032614,2.96042965363,1162.4747044078],[970336e-10,1.90669633585,206.1855484372],[.00012749023,2.71550286592,1052.2683831884],[7057931e-11,2.18184839926,1265.5674786264],[6137703e-11,6.26418240033,846.0828347512],[2616976e-11,2.00994012876,1581.959348283]],[[.0127180152,2.64937512894,529.6909650946],[.00061661816,3.00076460387,1059.3819301892],[.00053443713,3.89717383175,522.5774180938],[.00031185171,4.88276958012,536.8045120954],[.00041390269,0,0]]]],Saturn:[[[[.87401354025,0,0],[.11107659762,3.96205090159,213.299095438],[.01414150957,4.58581516874,7.1135470008],[.00398379389,.52112032699,206.1855484372],[.00350769243,3.30329907896,426.598190876],[.00206816305,.24658372002,103.0927742186],[792713e-9,3.84007056878,220.4126424388],[.00023990355,4.66976924553,110.2063212194],[.00016573588,.43719228296,419.4846438752],[.00014906995,5.76903183869,316.3918696566],[.0001582029,.93809155235,632.7837393132],[.00014609559,1.56518472,3.9321532631],[.00013160301,4.44891291899,14.2270940016],[.00015053543,2.71669915667,639.897286314],[.00013005299,5.98119023644,11.0457002639],[.00010725067,3.12939523827,202.2533951741],[5863206e-11,.23656938524,529.6909650946],[5227757e-11,4.20783365759,3.1813937377],[6126317e-11,1.76328667907,277.0349937414],[5019687e-11,3.17787728405,433.7117378768],[459255e-10,.61977744975,199.0720014364],[4005867e-11,2.24479718502,63.7358983034],[2953796e-11,.98280366998,95.9792272178],[387367e-10,3.22283226966,138.5174968707],[2461186e-11,2.03163875071,735.8765135318],[3269484e-11,.77492638211,949.1756089698],[1758145e-11,3.2658010994,522.5774180938],[1640172e-11,5.5050445305,846.0828347512],[1391327e-11,4.02333150505,323.5054166574],[1580648e-11,4.37265307169,309.2783226558],[1123498e-11,2.83726798446,415.5524906121],[1017275e-11,3.71700135395,227.5261894396],[848642e-11,3.1915017083,209.3669421749]],[[213.2990952169,0,0],[.01297370862,1.82834923978,213.299095438],[.00564345393,2.88499717272,7.1135470008],[.00093734369,1.06311793502,426.598190876],[.00107674962,2.27769131009,206.1855484372],[.00040244455,2.04108104671,220.4126424388],[.00019941774,1.2795439047,103.0927742186],[.00010511678,2.7488034213,14.2270940016],[6416106e-11,.38238295041,639.897286314],[4848994e-11,2.43037610229,419.4846438752],[4056892e-11,2.92133209468,110.2063212194],[3768635e-11,3.6496533078,3.9321532631]],[[.0011644133,1.17988132879,7.1135470008],[.00091841837,.0732519584,213.299095438],[.00036661728,0,0],[.00015274496,4.06493179167,206.1855484372]]],[[[.04330678039,3.60284428399,213.299095438],[.00240348302,2.85238489373,426.598190876],[.00084745939,0,0],[.00030863357,3.48441504555,220.4126424388],[.00034116062,.57297307557,206.1855484372],[.0001473407,2.11846596715,639.897286314],[9916667e-11,5.79003188904,419.4846438752],[6993564e-11,4.7360468972,7.1135470008],[4807588e-11,5.43305312061,316.3918696566]],[[.00198927992,4.93901017903,213.299095438],[.00036947916,3.14159265359,0],[.00017966989,.5197943111,426.598190876]]],[[[9.55758135486,0,0],[.52921382865,2.39226219573,213.299095438],[.01873679867,5.2354960466,206.1855484372],[.01464663929,1.64763042902,426.598190876],[.00821891141,5.93520042303,316.3918696566],[.00547506923,5.0153261898,103.0927742186],[.0037168465,2.27114821115,220.4126424388],[.00361778765,3.13904301847,7.1135470008],[.00140617506,5.70406606781,632.7837393132],[.00108974848,3.29313390175,110.2063212194],[.00069006962,5.94099540992,419.4846438752],[.00061053367,.94037691801,639.897286314],[.00048913294,1.55733638681,202.2533951741],[.00034143772,.19519102597,277.0349937414],[.00032401773,5.47084567016,949.1756089698],[.00020936596,.46349251129,735.8765135318],[9796004e-11,5.20477537945,1265.5674786264],[.00011993338,5.98050967385,846.0828347512],[208393e-9,1.52102476129,433.7117378768],[.00015298404,3.0594381494,529.6909650946],[6465823e-11,.17732249942,1052.2683831884],[.00011380257,1.7310542704,522.5774180938],[3419618e-11,4.94550542171,1581.959348283]],[[.0618298134,.2584351148,213.299095438],[.00506577242,.71114625261,206.1855484372],[.00341394029,5.79635741658,426.598190876],[.00188491195,.47215589652,220.4126424388],[.00186261486,3.14159265359,0],[.00143891146,1.40744822888,7.1135470008]],[[.00436902572,4.78671677509,213.299095438]]]],Uranus:[[[[5.48129294297,0,0],[.09260408234,.89106421507,74.7815985673],[.01504247898,3.6271926092,1.4844727083],[.00365981674,1.89962179044,73.297125859],[.00272328168,3.35823706307,149.5631971346],[.00070328461,5.39254450063,63.7358983034],[.00068892678,6.09292483287,76.2660712756],[.00061998615,2.26952066061,2.9689454166],[.00061950719,2.85098872691,11.0457002639],[.0002646877,3.14152083966,71.8126531507],[.00025710476,6.11379840493,454.9093665273],[.0002107885,4.36059339067,148.0787244263],[.00017818647,1.74436930289,36.6485629295],[.00014613507,4.73732166022,3.9321532631],[.00011162509,5.8268179635,224.3447957019],[.0001099791,.48865004018,138.5174968707],[9527478e-11,2.95516862826,35.1640902212],[7545601e-11,5.236265824,109.9456887885],[4220241e-11,3.23328220918,70.8494453042],[40519e-9,2.277550173,151.0476698429],[3354596e-11,1.0654900738,4.4534181249],[2926718e-11,4.62903718891,9.5612275556],[349034e-10,5.48306144511,146.594251718],[3144069e-11,4.75199570434,77.7505439839],[2922333e-11,5.35235361027,85.8272988312],[2272788e-11,4.36600400036,70.3281804424],[2051219e-11,1.51773566586,.1118745846],[2148602e-11,.60745949945,38.1330356378],[1991643e-11,4.92437588682,277.0349937414],[1376226e-11,2.04283539351,65.2203710117],[1666902e-11,3.62744066769,380.12776796],[1284107e-11,3.11347961505,202.2533951741],[1150429e-11,.93343589092,3.1813937377],[1533221e-11,2.58594681212,52.6901980395],[1281604e-11,.54271272721,222.8603229936],[1372139e-11,4.19641530878,111.4301614968],[1221029e-11,.1990065003,108.4612160802],[946181e-11,1.19253165736,127.4717966068],[1150989e-11,4.17898916639,33.6796175129]],[[74.7815986091,0,0],[.00154332863,5.24158770553,74.7815985673],[.00024456474,1.71260334156,1.4844727083],[9258442e-11,.4282973235,11.0457002639],[8265977e-11,1.50218091379,63.7358983034],[915016e-10,1.41213765216,149.5631971346]]],[[[.01346277648,2.61877810547,74.7815985673],[623414e-9,5.08111189648,149.5631971346],[.00061601196,3.14159265359,0],[9963722e-11,1.61603805646,76.2660712756],[992616e-10,.57630380333,73.297125859]],[[.00034101978,.01321929936,74.7815985673]]],[[[19.21264847206,0,0],[.88784984413,5.60377527014,74.7815985673],[.03440836062,.32836099706,73.297125859],[.0205565386,1.7829515933,149.5631971346],[.0064932241,4.52247285911,76.2660712756],[.00602247865,3.86003823674,63.7358983034],[.00496404167,1.40139935333,454.9093665273],[.00338525369,1.58002770318,138.5174968707],[.00243509114,1.57086606044,71.8126531507],[.00190522303,1.99809394714,1.4844727083],[.00161858838,2.79137786799,148.0787244263],[.00143706183,1.38368544947,11.0457002639],[.00093192405,.17437220467,36.6485629295],[.00071424548,4.24509236074,224.3447957019],[.00089806014,3.66105364565,109.9456887885],[.00039009723,1.66971401684,70.8494453042],[.00046677296,1.39976401694,35.1640902212],[.00039025624,3.36234773834,277.0349937414],[.00036755274,3.88649278513,146.594251718],[.00030348723,.70100838798,151.0476698429],[.00029156413,3.180563367,77.7505439839],[.00022637073,.72518687029,529.6909650946],[.00011959076,1.7504339214,984.6003316219],[.00025620756,5.25656086672,380.12776796]],[[.01479896629,3.67205697578,74.7815985673]]]],Neptune:[[[[5.31188633046,0,0],[.0179847553,2.9010127389,38.1330356378],[.01019727652,.48580922867,1.4844727083],[.00124531845,4.83008090676,36.6485629295],[.00042064466,5.41054993053,2.9689454166],[.00037714584,6.09221808686,35.1640902212],[.00033784738,1.24488874087,76.2660712756],[.00016482741,7727998e-11,491.5579294568],[9198584e-11,4.93747051954,39.6175083461],[899425e-10,.27462171806,175.1660598002]],[[38.13303563957,0,0],[.00016604172,4.86323329249,1.4844727083],[.00015744045,2.27887427527,38.1330356378]]],[[[.03088622933,1.44104372644,38.1330356378],[.00027780087,5.91271884599,76.2660712756],[.00027623609,0,0],[.00015355489,2.52123799551,36.6485629295],[.00015448133,3.50877079215,39.6175083461]]],[[[30.07013205828,0,0],[.27062259632,1.32999459377,38.1330356378],[.01691764014,3.25186135653,36.6485629295],[.00807830553,5.18592878704,1.4844727083],[.0053776051,4.52113935896,35.1640902212],[.00495725141,1.5710564165,491.5579294568],[.00274571975,1.84552258866,175.1660598002],[.0001201232,1.92059384991,1021.2488945514],[.00121801746,5.79754470298,76.2660712756],[.00100896068,.3770272493,73.297125859],[.00135134092,3.37220609835,39.6175083461],[7571796e-11,1.07149207335,388.4651552382]]]]};function Rn(n){var t,e,a,r,o,s,i;let c=2e3+(n-14)/ln;return c<-500?(t=(c-1820)/100,-20+32*t*t):c<500?(t=c/100,e=t*t,a=t*e,r=e*e,o=e*a,s=a*a,10583.6-1014.41*t+33.78311*e-5.952053*a-.1798452*r+.022174192*o+.0090316521*s):c<1600?(t=(c-1e3)/100,e=t*t,a=t*e,r=e*e,o=e*a,s=a*a,1574.2-556.01*t+71.23472*e+.319781*a-.8503463*r-.005050998*o+.0083572073*s):c<1700?(t=c-1600,e=t*t,a=t*e,120-.9808*t-.01532*e+a/7129):c<1800?(t=c-1700,e=t*t,a=t*e,r=e*e,8.83+.1603*t-.0059285*e+13336e-8*a-r/1174e3):c<1860?(t=c-1800,e=t*t,a=t*e,r=e*e,o=e*a,s=a*a,i=a*r,13.72-.332447*t+.0068612*e+.0041116*a-37436e-8*r+121272e-10*o-1699e-10*s+875e-12*i):c<1900?(t=c-1860,e=t*t,a=t*e,r=e*e,o=e*a,7.62+.5737*t-.251754*e+.01680668*a-.0004473624*r+o/233174):c<1920?(t=c-1900,e=t*t,a=t*e,r=e*e,-2.79+1.494119*t-.0598939*e+.0061966*a-197e-6*r):c<1941?(t=c-1920,e=t*t,a=t*e,21.2+.84493*t-.0761*e+.0020936*a):c<1961?(t=c-1950,e=t*t,a=t*e,29.07+.407*t-e/233+a/2547):c<1986?(t=c-1975,e=t*t,a=t*e,45.45+1.067*t-e/260-a/718):c<2005?(t=c-2e3,e=t*t,a=t*e,r=e*e,o=e*a,63.86+.3345*t-.060374*e+.0017275*a+651814e-9*r+2373599e-11*o):c<2050?(t=c-2e3,62.92+.32217*t+.005589*t*t):c<2150?(t=(c-1820)/100,-20+32*t*t-.5628*(2150-c)):(t=(c-1820)/100,-20+32*t*t)}var zn=Rn;function M1(n){return n+zn(n)/86400}var N0=class n{constructor(t){if(t instanceof n){this.date=t.date,this.ut=t.ut,this.tt=t.tt;return}let e=1e3*3600*24;if(t instanceof Date&&Number.isFinite(t.getTime())){this.date=t,this.ut=(t.getTime()-f1.getTime())/e,this.tt=M1(this.ut);return}if(Number.isFinite(t)){this.date=new Date(f1.getTime()+t*e),this.ut=t,this.tt=M1(this.ut);return}throw"Argument must be a Date object, an AstroTime object, or a numeric UTC Julian date."}static FromTerrestrialTime(t){let e=new n(t);for(;;){let a=t-e.tt;if(Math.abs(a)<1e-12)return e;e=e.AddDays(a)}}toString(){return this.date.toISOString()}AddDays(t){return new n(this.ut+t)}};function Cn(n,t,e){return new N0(n.ut+e*(t.ut-n.ut))}function $(n){return n instanceof N0?n:new N0(n)}function Nn(n){function t(M){return M%dn*b0}let e=n.tt/36525,a=t(128710479305e-5+e*1295965810481e-4),r=t(335779.526232+e*17395272628478e-4),o=t(107226070369e-5+e*1602961601209e-3),s=t(450160.398036-e*69628905431e-4),i=Math.sin(s),c=Math.cos(s),l=(-172064161-174666*e)*i+33386*c,h=(92052331+9086*e)*c+15377*i,f=2*(r-o+s);return i=Math.sin(f),c=Math.cos(f),l+=(-13170906-1675*e)*i-13696*c,h+=(5730336-3015*e)*c-4587*i,f=2*(r+s),i=Math.sin(f),c=Math.cos(f),l+=(-2276413-234*e)*i+2796*c,h+=(978459-485*e)*c+1374*i,f=2*s,i=Math.sin(f),c=Math.cos(f),l+=(2074554+207*e)*i-698*c,h+=(-897492+470*e)*c-291*i,i=Math.sin(a),c=Math.cos(a),l+=(1475877-3633*e)*i+11817*c,h+=(73871-184*e)*c-1924*i,{dpsi:-135e-6+l*1e-7,deps:388e-6+h*1e-7}}function k1(n){var t=n.tt/36525,e=((((-434e-10*t-576e-9)*t+.0020034)*t-1831e-7)*t-46.836769)*t+84381.406;return e/3600}var Q0;function K0(n){if(!Q0||Math.abs(Q0.tt-n.tt)>1e-6){let t=Nn(n),e=k1(n),a=e+t.deps/3600;Q0={tt:n.tt,dpsi:t.dpsi,deps:t.deps,ee:t.dpsi*Math.cos(e*z)/15,mobl:e,tobl:a}}return Q0}function _1(n,t){let e=n*z,a=Math.cos(e),r=Math.sin(e);return[t[0],t[1]*a-t[2]*r,t[1]*r+t[2]*a]}function In(n,t){return _1(k1(n),t)}var Ln=0;function T1(n){++Ln;let t=n.tt/36525;function e(E,C){let U=[],V;for(V=0;V<=C-E;++V)U.push(0);return{min:E,array:U}}function a(E,C,U,V){let F=[];for(let h0=0;h0<=C-E;++h0)F.push(e(U,V));return{min:E,array:F}}function r(E,C,U){let V=E.array[C-E.min];return V.array[U-V.min]}function o(E,C,U,V){let F=E.array[C-E.min];F.array[U-F.min]=V}let s,i,c,l,h,f,M,x,S,y,_,b,d,g,v,w,P,T,D,L,H,K,J,n0=a(-6,6,1,4),c0=a(-6,6,1,4);function j(E,C){return r(n0,E,C)}function e0(E,C){return r(c0,E,C)}function a0(E,C,U){return o(n0,E,C,U)}function u0(E,C,U){return o(c0,E,C,U)}function p0(E,C,U,V,F){F(E*U-C*V,C*U+E*V)}function R(E){return Math.sin(o0*E)}M=t*t,S=0,J=0,_=0,b=3422.7;var O=R(.19833+.05611*t),k0=R(.27869+.04508*t),_0=R(.16827-.36903*t),M0=R(.34734-5.37261*t),g0=R(.10498-5.37899*t),y0=R(.42681-.41855*t),an=R(.14943-5.37511*t);for(T=.84*O+.31*k0+14.27*_0+7.26*M0+.28*g0+.24*y0,D=2.94*O+.31*k0+14.27*_0+9.34*M0+1.12*g0+.83*y0,L=-6.4*O-1.89*y0,H=.21*O+.31*k0+14.27*_0-88.7*M0-15.3*g0+.24*y0-1.86*an,K=T-L,x=-3332e-9*R(.59734-5.37261*t)-539e-9*R(.35498-5.37899*t)-64e-9*R(.39943-5.37511*t),d=o0*E0(.60643382+1336.85522467*t-313e-8*M)+T/l0,g=o0*E0(.37489701+1325.55240982*t+2565e-8*M)+D/l0,v=o0*E0(.99312619+99.99735956*t-44e-8*M)+L/l0,w=o0*E0(.25909118+1342.2278298*t-892e-8*M)+H/l0,P=o0*E0(.82736186+1236.85308708*t-397e-8*M)+K/l0,h=1;h<=4;++h){switch(h){case 1:c=g,i=4,l=1.000002208;break;case 2:c=v,i=3,l=.997504612-.002495388*t;break;case 3:c=w,i=4,l=1.000002708+139.978*x;break;case 4:c=P,i=6,l=1;break;default:throw`Internal error: I = ${h}`}for(a0(0,h,1),a0(1,h,Math.cos(c)*l),u0(0,h,0),u0(1,h,Math.sin(c)*l),f=2;f<=i;++f)p0(j(f-1,h),e0(f-1,h),j(1,h),e0(1,h),(E,C)=>(a0(f,h,E),u0(f,h,C)));for(f=1;f<=i;++f)a0(-f,h,j(f,h)),u0(-f,h,-e0(f,h))}function h1(E,C,U,V){for(var F={x:1,y:0},h0=[0,E,C,U,V],r0=1;r0<=4;++r0)h0[r0]!==0&&p0(F.x,F.y,j(h0[r0],r0),e0(h0[r0],r0),(At,T0)=>(F.x=At,F.y=T0));return F}function m(E,C,U,V,F,h0,r0,At){var T0=h1(F,h0,r0,At);S+=E*T0.y,J+=C*T0.y,_+=U*T0.x,b+=V*T0.x}m(13.902,14.06,-.001,.2607,0,0,0,4),m(.403,-4.01,.394,.0023,0,0,0,3),m(2369.912,2373.36,.601,28.2333,0,0,0,2),m(-125.154,-112.79,-.725,-.9781,0,0,0,1),m(1.979,6.98,-.445,.0433,1,0,0,4),m(191.953,192.72,.029,3.0861,1,0,0,2),m(-8.466,-13.51,.455,-.1093,1,0,0,1),m(22639.5,22609.07,.079,186.5398,1,0,0,0),m(18.609,3.59,-.094,.0118,1,0,0,-1),m(-4586.465,-4578.13,-.077,34.3117,1,0,0,-2),m(3.215,5.44,.192,-.0386,1,0,0,-3),m(-38.428,-38.64,.001,.6008,1,0,0,-4),m(-.393,-1.43,-.092,.0086,1,0,0,-6),m(-.289,-1.59,.123,-.0053,0,1,0,4),m(-24.42,-25.1,.04,-.3,0,1,0,2),m(18.023,17.93,.007,.1494,0,1,0,1),m(-668.146,-126.98,-1.302,-.3997,0,1,0,0),m(.56,.32,-.001,-.0037,0,1,0,-1),m(-165.145,-165.06,.054,1.9178,0,1,0,-2),m(-1.877,-6.46,-.416,.0339,0,1,0,-4),m(.213,1.02,-.074,.0054,2,0,0,4),m(14.387,14.78,-.017,.2833,2,0,0,2),m(-.586,-1.2,.054,-.01,2,0,0,1),m(769.016,767.96,.107,10.1657,2,0,0,0),m(1.75,2.01,-.018,.0155,2,0,0,-1),m(-211.656,-152.53,5.679,-.3039,2,0,0,-2),m(1.225,.91,-.03,-.0088,2,0,0,-3),m(-30.773,-34.07,-.308,.3722,2,0,0,-4),m(-.57,-1.4,-.074,.0109,2,0,0,-6),m(-2.921,-11.75,.787,-.0484,1,1,0,2),m(1.267,1.52,-.022,.0164,1,1,0,1),m(-109.673,-115.18,.461,-.949,1,1,0,0),m(-205.962,-182.36,2.056,1.4437,1,1,0,-2),m(.233,.36,.012,-.0025,1,1,0,-3),m(-4.391,-9.66,-.471,.0673,1,1,0,-4),m(.283,1.53,-.111,.006,1,-1,0,4),m(14.577,31.7,-1.54,.2302,1,-1,0,2),m(147.687,138.76,.679,1.1528,1,-1,0,0),m(-1.089,.55,.021,0,1,-1,0,-1),m(28.475,23.59,-.443,-.2257,1,-1,0,-2),m(-.276,-.38,-.006,-.0036,1,-1,0,-3),m(.636,2.27,.146,-.0102,1,-1,0,-4),m(-.189,-1.68,.131,-.0028,0,2,0,2),m(-7.486,-.66,-.037,-.0086,0,2,0,0),m(-8.096,-16.35,-.74,.0918,0,2,0,-2),m(-5.741,-.04,0,-9e-4,0,0,2,2),m(.255,0,0,0,0,0,2,1),m(-411.608,-.2,0,-.0124,0,0,2,0),m(.584,.84,0,.0071,0,0,2,-1),m(-55.173,-52.14,0,-.1052,0,0,2,-2),m(.254,.25,0,-.0017,0,0,2,-3),m(.025,-1.67,0,.0031,0,0,2,-4),m(1.06,2.96,-.166,.0243,3,0,0,2),m(36.124,50.64,-1.3,.6215,3,0,0,0),m(-13.193,-16.4,.258,-.1187,3,0,0,-2),m(-1.187,-.74,.042,.0074,3,0,0,-4),m(-.293,-.31,-.002,.0046,3,0,0,-6),m(-.29,-1.45,.116,-.0051,2,1,0,2),m(-7.649,-10.56,.259,-.1038,2,1,0,0),m(-8.627,-7.59,.078,-.0192,2,1,0,-2),m(-2.74,-2.54,.022,.0324,2,1,0,-4),m(1.181,3.32,-.212,.0213,2,-1,0,2),m(9.703,11.67,-.151,.1268,2,-1,0,0),m(-.352,-.37,.001,-.0028,2,-1,0,-1),m(-2.494,-1.17,-.003,-.0017,2,-1,0,-2),m(.36,.2,-.012,-.0043,2,-1,0,-4),m(-1.167,-1.25,.008,-.0106,1,2,0,0),m(-7.412,-6.12,.117,.0484,1,2,0,-2),m(-.311,-.65,-.032,.0044,1,2,0,-4),m(.757,1.82,-.105,.0112,1,-2,0,2),m(2.58,2.32,.027,.0196,1,-2,0,0),m(2.533,2.4,-.014,-.0212,1,-2,0,-2),m(-.344,-.57,-.025,.0036,0,3,0,-2),m(-.992,-.02,0,0,1,0,2,2),m(-45.099,-.02,0,-.001,1,0,2,0),m(-.179,-9.52,0,-.0833,1,0,2,-2),m(-.301,-.33,0,.0014,1,0,2,-4),m(-6.382,-3.37,0,-.0481,1,0,-2,2),m(39.528,85.13,0,-.7136,1,0,-2,0),m(9.366,.71,0,-.0112,1,0,-2,-2),m(.202,.02,0,0,1,0,-2,-4),m(.415,.1,0,.0013,0,1,2,0),m(-2.152,-2.26,0,-.0066,0,1,2,-2),m(-1.44,-1.3,0,.0014,0,1,-2,2),m(.384,-.04,0,0,0,1,-2,-2),m(1.938,3.6,-.145,.0401,4,0,0,0),m(-.952,-1.58,.052,-.013,4,0,0,-2),m(-.551,-.94,.032,-.0097,3,1,0,0),m(-.482,-.57,.005,-.0045,3,1,0,-2),m(.681,.96,-.026,.0115,3,-1,0,0),m(-.297,-.27,.002,-9e-4,2,2,0,-2),m(.254,.21,-.003,0,2,-2,0,-2),m(-.25,-.22,.004,.0014,1,3,0,-2),m(-3.996,0,0,4e-4,2,0,2,0),m(.557,-.75,0,-.009,2,0,2,-2),m(-.459,-.38,0,-.0053,2,0,-2,2),m(-1.298,.74,0,4e-4,2,0,-2,0),m(.538,1.14,0,-.0141,2,0,-2,-2),m(.263,.02,0,0,1,1,2,0),m(.426,.07,0,-6e-4,1,1,-2,-2),m(-.304,.03,0,3e-4,1,-1,2,0),m(-.372,-.19,0,-.0027,1,-1,-2,2),m(.418,0,0,0,0,0,4,0),m(-.33,-.04,0,0,3,0,2,0);function B(E,C,U,V,F){return E*h1(C,U,V,F).y}y=0,y+=B(-526.069,0,0,1,-2),y+=B(-3.352,0,0,1,-4),y+=B(44.297,1,0,1,-2),y+=B(-6,1,0,1,-4),y+=B(20.599,-1,0,1,0),y+=B(-30.598,-1,0,1,-2),y+=B(-24.649,-2,0,1,0),y+=B(-2,-2,0,1,-2),y+=B(-22.571,0,1,1,-2),y+=B(10.985,0,-1,1,-2),S+=.82*R(.7736-62.5512*t)+.31*R(.0466-125.1025*t)+.35*R(.5785-25.1042*t)+.66*R(.4591+1335.8075*t)+.64*R(.313-91.568*t)+1.14*R(.148+1331.2898*t)+.21*R(.5918+1056.5859*t)+.44*R(.5784+1322.8595*t)+.24*R(.2275-5.7374*t)+.28*R(.2965+2.6929*t)+.33*R(.3132+6.3368*t),s=w+J/l0;let rn=(1.000002708+139.978*x)*(18518.511+1.189+_)*Math.sin(s)-6.24*Math.sin(3*s)+y;return{geo_eclip_lon:o0*E0((d+S/l0)/o0),geo_eclip_lat:Math.PI/(180*3600)*rn,distance_au:l0*xn/(.999953253*b)}}function E1(n,t){return[n.rot[0][0]*t[0]+n.rot[1][0]*t[1]+n.rot[2][0]*t[2],n.rot[0][1]*t[0]+n.rot[1][1]*t[1]+n.rot[2][1]*t[2],n.rot[0][2]*t[0]+n.rot[1][2]*t[1]+n.rot[2][2]*t[2]]}function nt(n,t,e){let a=Un(t,e);return E1(a,n)}function Un(n,t){let e=n.tt/36525,a=84381.406,r=((((-951e-10*e+132851e-9)*e-.00114045)*e-1.0790069)*e+5038.481507)*e,o=((((3337e-10*e-467e-9)*e-.00772503)*e+.0512623)*e-.025754)*e+a,s=((((-56e-9*e+170663e-9)*e-.00121197)*e-2.3814292)*e+10.556403)*e;a*=b0,r*=b0,o*=b0,s*=b0;let i=Math.sin(a),c=Math.cos(a),l=Math.sin(-r),h=Math.cos(-r),f=Math.sin(-o),M=Math.cos(-o),x=Math.sin(s),S=Math.cos(s),y=S*h-l*x*M,_=S*l*c+x*M*h*c-i*x*f,b=S*l*i+x*M*h*i+c*x*f,d=-x*h-l*S*M,g=-x*l*c+S*M*h*c-i*S*f,v=-x*l*i+S*M*h*i+c*S*f,w=l*f,P=-f*h*c-i*M,T=-f*h*i+M*c;if(t===q.Into2000)return new A0([[y,_,b],[d,g,v],[w,P,T]]);if(t===q.From2000)return new A0([[y,d,w],[_,g,P],[b,v,T]]);throw"Invalid precess direction"}function On(n){let t=.779057273264+.00273781191135448*n.ut,e=n.ut%1,a=360*((t+e)%1);return a<0&&(a+=360),a}var W0;function b1(n){if(!W0||W0.tt!==n.tt){let t=n.tt/36525,e=15*K0(n).ee,a=On(n),o=((e+.014506+((((-368e-10*t-29956e-9)*t-44e-8)*t+1.3915817)*t+4612.156534)*t)/3600+a)%360/15;o<0&&(o+=24),W0={tt:n.tt,st:o}}return W0.st}function $n(n,t){let e=n.latitude*z,a=Math.sin(e),r=Math.cos(e),o=1/Math.hypot(r,S0*a),s=yn*o,i=n.height/1e3,c=C0*o+i,l=C0*s+i,h=(15*t+n.longitude)*z,f=Math.sin(h),M=Math.cos(h);return{pos:[c*r*M/Q,c*r*f/Q,l*a/Q],vel:[-m1*c*r*f*86400/Q,m1*c*r*M*86400/Q,0]}}function et(n,t,e){let a=Vn(t,e);return E1(a,n)}function Vn(n,t){let e=K0(n),a=e.mobl*z,r=e.tobl*z,o=e.dpsi*b0,s=Math.cos(a),i=Math.sin(a),c=Math.cos(r),l=Math.sin(r),h=Math.cos(o),f=Math.sin(o),M=h,x=-f*s,S=-f*i,y=f*c,_=h*s*c+i*l,b=h*i*c-s*l,d=f*l,g=h*s*l-i*c,v=h*i*l+s*c;if(t===q.From2000)return new A0([[M,y,d],[x,_,g],[S,b,v]]);if(t===q.Into2000)return new A0([[M,x,S],[y,_,b],[d,g,v]]);throw"Invalid precess direction"}function Xt(n,t,e){return e===q.Into2000?nt(et(n,t,e),t,e):et(nt(n,t,e),t,e)}function Fn(n,t){let e=b1(n),a=$n(t,e).pos;return Xt(a,n,q.Into2000)}var I=class{constructor(t,e,a,r){this.x=t,this.y=e,this.z=a,this.t=r}Length(){return Math.hypot(this.x,this.y,this.z)}},X=class{constructor(t,e,a,r,o,s,i){this.x=t,this.y=e,this.z=a,this.vx=r,this.vy=o,this.vz=s,this.t=i}},at=class{constructor(t,e,a){this.lat=N(t),this.lon=N(e),this.dist=N(a)}},rt=class{constructor(t,e,a,r){this.ra=N(t),this.dec=N(e),this.dist=N(a),this.vec=r}};var A0=class{constructor(t){this.rot=t}};var Pt=class{constructor(t,e,a,r){this.azimuth=N(t),this.altitude=N(e),this.ra=N(a),this.dec=N(r)}},Rt=class{constructor(t,e,a){this.vec=t,this.elat=N(e),this.elon=N(a)}};function P1(n,t){return new I(n[0],n[1],n[2],t)}function g1(n,t){let e=P1(n,t),a=e.x*e.x+e.y*e.y,r=Math.sqrt(a+e.z*e.z);if(a===0){if(e.z===0)throw"Indeterminate sky coordinates";return new rt(0,e.z<0?-90:90,r,e)}let o=D1*Math.atan2(e.y,e.x);o<0&&(o+=24);let s=Z*Math.atan2(n[2],Math.sqrt(a));return new rt(o,s,r,e)}function vt(n,t){let e=n*z,a=Math.cos(e),r=Math.sin(e);return[a*t[0]+r*t[1],a*t[1]-r*t[0],t[2]]}function Hn(n,t,e,a,r){let o=$(n);ct(t),N(e),N(a);let s=Math.sin(t.latitude*z),i=Math.cos(t.latitude*z),c=Math.sin(t.longitude*z),l=Math.cos(t.longitude*z),h=Math.sin(a*z),f=Math.cos(a*z),M=Math.sin(e*d1),x=Math.cos(e*d1),S=[i*l,i*c,s],y=[-s*l,-s*c,i],_=[c,-l,0],b=-15*b1(o),d=vt(b,S),g=vt(b,y),v=vt(b,_),w=[f*x,f*M,h],P=w[0]*d[0]+w[1]*d[1]+w[2]*d[2],T=w[0]*g[0]+w[1]*g[1]+w[2]*g[2],D=w[0]*v[0]+w[1]*v[1]+w[2]*v[2],L=Math.hypot(T,D),H;L>0?(H=-Z*Math.atan2(D,T),H<0&&(H+=360)):H=0;let K=Z*Math.atan2(L,P),J=e,n0=a;if(r){let c0=K,j=fe(r,90-K);if(K-=j,j>0&&K>3e-4){let e0=Math.sin(K*z),a0=Math.cos(K*z),u0=Math.sin(c0*z),p0=Math.cos(c0*z),R=[];for(let O=0;O<3;++O)R.push((w[O]-p0*d[O])/u0*e0+d[O]*a0);L=Math.hypot(R[0],R[1]),L>0?(J=D1*Math.atan2(R[1],R[0]),J<0&&(J+=24)):J=0,n0=Z*Math.atan2(R[2],L)}}return new Pt(H,90-K,J,n0)}function ct(n){if(!(n instanceof H0))throw`Not an instance of the Observer class: ${n}`;if(N(n.latitude),N(n.longitude),N(n.height),n.latitude<-90||n.latitude>90)throw`Latitude ${n.latitude} is out of range. Must be -90..+90.`;return n}var H0=class{constructor(t,e,a){this.latitude=t,this.longitude=e,this.height=a,ct(this)}};function R1(n){let t=$(n).AddDays(-1/Yt),e=z0(W.Earth,t),a=[-e.x,-e.y,-e.z],[r,o,s]=Xt(a,t,q.From2000),i=z*K0(t).tobl,c=Math.cos(i),l=Math.sin(i),h=new I(r,o,s,t);return Zt(h,c,l)}function Kn(n,t,e,a,r){ct(e),tt(a),tt(r);let o=$(t),s=Fn(o,e),i=Ht(n,o,r),c=[i.x-s[0],i.y-s[1],i.z-s[2]];if(!a)return g1(c,o);let l=Xt(c,o,q.From2000);return g1(l,o)}function Zt(n,t,e){let a=n.x,r=n.y*t+n.z*e,o=-n.y*e+n.z*t,s=Math.hypot(a,r),i=0;s>0&&(i=Z*Math.atan2(r,a),i<0&&(i+=360));let c=Z*Math.atan2(o,s),l=new I(a,r,o,n.t);return new Rt(l,c,i)}function zt(n){let t=K0(n.t),e=[n.x,n.y,n.z],a=nt(e,n.t,q.From2000),[r,o,s]=et(a,n.t,q.From2000),i=new I(r,o,s,n.t),c=t.tobl*z;return Zt(i,Math.cos(c),Math.sin(c))}function I0(n){let t=$(n),e=T1(t),a=e.distance_au*Math.cos(e.geo_eclip_lat),r=[a*Math.cos(e.geo_eclip_lon),a*Math.sin(e.geo_eclip_lon),e.distance_au*Math.sin(e.geo_eclip_lat)],o=In(t,r),s=nt(o,t,q.Into2000);return new I(s[0],s[1],s[2],t)}function z1(n){let t=$(n),e=T1(t),a=e.distance_au*Math.cos(e.geo_eclip_lat),r=[a*Math.cos(e.geo_eclip_lon),a*Math.sin(e.geo_eclip_lon),e.distance_au*Math.sin(e.geo_eclip_lat)],o=K0(t),s=_1(o.mobl,r),i=et(s,t,q.From2000),c=P1(i,t),l=o.tobl*z,h=Math.cos(l),f=Math.sin(l),M=Zt(c,h,f);return new at(M.elat,M.elon,e.distance_au)}function C1(n){let t=$(n),e=1e-5,a=t.AddDays(-e),r=t.AddDays(+e),o=I0(a),s=I0(r);return new X((o.x+s.x)/2,(o.y+s.y)/2,(o.z+s.z)/2,(s.x-o.x)/(2*e),(s.y-o.y)/(2*e),(s.z-o.z)/(2*e),t)}function qn(n){let t=$(n),e=C1(t),a=1+Bt;return new X(e.x/a,e.y/a,e.z/a,e.vx/a,e.vy/a,e.vz/a,t)}function R0(n,t,e){let a=1,r=0;for(let o of n){let s=0;for(let[c,l,h]of o)s+=c*Math.cos(l+t*h);let i=a*s;e&&(i%=o0),r+=i,a*=t}return r}function kt(n,t){let e=1,a=0,r=0,o=0;for(let s of n){let i=0,c=0;for(let[l,h,f]of s){let M=h+t*f;i+=l*f*Math.sin(M),o>0&&(c+=l*Math.cos(M))}r+=o*a*c-e*i,a=e,e*=t,++o}return r}var F0=365250,Ct=0,Nt=1,It=2;function Lt(n){return new i0(n[0]+44036e-11*n[1]-190919e-12*n[2],-479966e-12*n[0]+.917482137087*n[1]-.397776982902*n[2],.397776982902*n[1]+.917482137087*n[2])}function N1(n,t,e){let a=e*Math.cos(t),r=Math.cos(n),o=Math.sin(n);return[a*r,a*o,e*Math.sin(t)]}function z0(n,t){let e=t.tt/F0,a=R0(n[Ct],e,!0),r=R0(n[Nt],e,!1),o=R0(n[It],e,!1),s=N1(a,r,o);return Lt(s).ToAstroVector(t)}function Ut(n,t){let e=t/F0,a=R0(n[Ct],e,!0),r=R0(n[Nt],e,!1),o=R0(n[It],e,!1),s=kt(n[Ct],e),i=kt(n[Nt],e),c=kt(n[It],e),l=Math.cos(a),h=Math.sin(a),f=Math.cos(r),M=Math.sin(r),x=+(c*f*l)-o*M*l*i-o*f*h*s,S=+(c*f*h)-o*M*h*i+o*f*l*s,y=+(c*M)+o*f*i,_=N1(a,r,o),b=[x/F0,S/F0,y/F0],d=Lt(_),g=Lt(b);return new L0(t,d,g)}function X0(n,t,e,a){let r=a/(a+Qt),o=z0(W[e],t);n.x+=r*o.x,n.y+=r*o.y,n.z+=r*o.z}function Jn(n){let t=new I(0,0,0,n);return X0(t,n,p.Jupiter,_t),X0(t,n,p.Saturn,Tt),X0(t,n,p.Uranus,Et),X0(t,n,p.Neptune,bt),t}var Ot=51,Gn=29200,P0=146,s0=201,x0=[[-73e4,[-26.118207232108,-14.376168177825,3.384402515299],[.0016339372163656,-.0027861699588508,-.0013585880229445]],[-700800,[41.974905202127,-.448502952929,-12.770351505989],[.00073458569351457,.0022785014891658,.00048619778602049]],[-671600,[14.706930780744,44.269110540027,9.353698474772],[-.00210001479998,.00022295915939915,.00070143443551414]],[-642400,[-29.441003929957,-6.43016153057,6.858481011305],[.00084495803960544,-.0030783914758711,-.0012106305981192]],[-613200,[39.444396946234,-6.557989760571,-13.913760296463],[.0011480029005873,.0022400006880665,.00035168075922288]],[-584e3,[20.2303809507,43.266966657189,7.382966091923],[-.0019754081700585,.00053457141292226,.00075929169129793]],[-554800,[-30.65832536462,2.093818874552,9.880531138071],[61010603013347e-18,-.0031326500935382,-.00099346125151067]],[-525600,[35.737703251673,-12.587706024764,-14.677847247563],[.0015802939375649,.0021347678412429,.00019074436384343]],[-496400,[25.466295188546,41.367478338417,5.216476873382],[-.0018054401046468,.0008328308359951,.00080260156912107]],[-467200,[-29.847174904071,10.636426313081,12.297904180106],[-.00063257063052907,-.0029969577578221,-.00074476074151596]],[-438e3,[30.774692107687,-18.236637015304,-14.945535879896],[.0020113162005465,.0019353827024189,-20937793168297e-19]],[-408800,[30.243153324028,38.656267888503,2.938501750218],[-.0016052508674468,.0011183495337525,.00083333973416824]],[-379600,[-27.288984772533,18.643162147874,14.023633623329],[-.0011856388898191,-.0027170609282181,-.00049015526126399]],[-350400,[24.519605196774,-23.245756064727,-14.626862367368],[.0024322321483154,.0016062008146048,-.00023369181613312]],[-321200,[34.505274805875,35.125338586954,.557361475637],[-.0013824391637782,.0013833397561817,.00084823598806262]],[-292e3,[-23.275363915119,25.818514298769,15.055381588598],[-.0016062295460975,-.0023395961498533,-.00024377362639479]],[-262800,[17.050384798092,-27.180376290126,-13.608963321694],[.0028175521080578,.0011358749093955,-.00049548725258825]],[-233600,[38.093671910285,30.880588383337,-1.843688067413],[-.0011317697153459,.0016128814698472,.00084177586176055]],[-204400,[-18.197852930878,31.932869934309,15.438294826279],[-.0019117272501813,-.0019146495909842,-19657304369835e-18]],[-175200,[8.528924039997,-29.618422200048,-11.805400994258],[.0031034370787005,.0005139363329243,-.00077293066202546]],[-146e3,[40.94685725864,25.904973592021,-4.256336240499],[-.00083652705194051,.0018129497136404,.0008156422827306]],[-116800,[-12.326958895325,36.881883446292,15.217158258711],[-.0021166103705038,-.001481442003599,.00017401209844705]],[-87600,[-.633258375909,-30.018759794709,-9.17193287495],[.0032016994581737,-.00025279858672148,-.0010411088271861]],[-58400,[42.936048423883,20.344685584452,-6.588027007912],[-.00050525450073192,.0019910074335507,.00077440196540269]],[-29200,[-5.975910552974,40.61180995846,14.470131723673],[-.0022184202156107,-.0010562361130164,.00033652250216211]],[0,[-9.875369580774,-27.978926224737,-5.753711824704],[.0030287533248818,-.0011276087003636,-.0012651326732361]],[29200,[43.958831986165,14.214147973292,-8.808306227163],[-.00014717608981871,.0021404187242141,.00071486567806614]],[58400,[.67813676352,43.094461639362,13.243238780721],[-.0022358226110718,-.00063233636090933,.00047664798895648]],[87600,[-18.282602096834,-23.30503958666,-1.766620508028],[.0025567245263557,-.0019902940754171,-.0013943491701082]],[116800,[43.873338744526,7.700705617215,-10.814273666425],[.00023174803055677,.0022402163127924,.00062988756452032]],[146e3,[7.392949027906,44.382678951534,11.629500214854],[-.002193281545383,-.00021751799585364,.00059556516201114]],[175200,[-24.981690229261,-16.204012851426,2.466457544298],[.001819398914958,-.0026765419531201,-.0013848283502247]],[204400,[42.530187039511,.845935508021,-12.554907527683],[.00065059779150669,.0022725657282262,.00051133743202822]],[233600,[13.999526486822,44.462363044894,9.669418486465],[-.0021079296569252,.00017533423831993,.00069128485798076]],[262800,[-29.184024803031,-7.371243995762,6.493275957928],[.00093581363109681,-.0030610357109184,-.0012364201089345]],[292e3,[39.831980671753,-6.078405766765,-13.909815358656],[.0011117769689167,.0022362097830152,.00036230548231153]],[321200,[20.294955108476,43.417190420251,7.450091985932],[-.0019742157451535,.00053102050468554,.00075938408813008]],[350400,[-30.66999230216,2.318743558955,9.973480913858],[45605107450676e-18,-.0031308219926928,-.00099066533301924]],[379600,[35.626122155983,-12.897647509224,-14.777586508444],[.0016015684949743,.0021171931182284,.00018002516202204]],[408800,[26.133186148561,41.232139187599,5.00640132622],[-.0017857704419579,.00086046232702817,.00080614690298954]],[438e3,[-29.57674022923,11.863535943587,12.631323039872],[-.00072292830060955,-.0029587820140709,-.000708242964503]],[467200,[29.910805787391,-19.159019294,-15.013363865194],[.0020871080437997,.0018848372554514,-38528655083926e-18]],[496400,[31.375957451819,38.050372720763,2.433138343754],[-.0015546055556611,.0011699815465629,.00083565439266001]],[525600,[-26.360071336928,20.662505904952,14.414696258958],[-.0013142373118349,-.0026236647854842,-.00042542017598193]],[554800,[22.599441488648,-24.508879898306,-14.484045731468],[.0025454108304806,.0014917058755191,-.00030243665086079]],[584e3,[35.877864013014,33.894226366071,-.224524636277],[-.0012941245730845,.0014560427668319,.00084762160640137]],[613200,[-21.538149762417,28.204068269761,15.321973799534],[-.001731211740901,-.0021939631314577,-.0001631691327518]],[642400,[13.971521374415,-28.339941764789,-13.083792871886],[.0029334630526035,.00091860931752944,-.00059939422488627]],[671600,[39.526942044143,28.93989736011,-2.872799527539],[-.0010068481658095,.001702113288809,.00083578230511981]],[700800,[-15.576200701394,34.399412961275,15.466033737854],[-.0020098814612884,-.0017191109825989,70414782780416e-18]],[73e4,[4.24325283709,-30.118201690825,-10.707441231349],[.0031725847067411,.0001609846120227,-.00090672150593868]]],i0=class n{constructor(t,e,a){this.x=t,this.y=e,this.z=a}clone(){return new n(this.x,this.y,this.z)}ToAstroVector(t){return new I(this.x,this.y,this.z,t)}static zero(){return new n(0,0,0)}quadrature(){return this.x*this.x+this.y*this.y+this.z*this.z}add(t){return new n(this.x+t.x,this.y+t.y,this.z+t.z)}sub(t){return new n(this.x-t.x,this.y-t.y,this.z-t.z)}incr(t){this.x+=t.x,this.y+=t.y,this.z+=t.z}decr(t){this.x-=t.x,this.y-=t.y,this.z-=t.z}mul(t){return new n(t*this.x,t*this.y,t*this.z)}div(t){return new n(this.x/t,this.y/t,this.z/t)}mean(t){return new n((this.x+t.x)/2,(this.y+t.y)/2,(this.z+t.z)/2)}neg(){return new n(-this.x,-this.y,-this.z)}},L0=class n{constructor(t,e,a){this.tt=t,this.r=e,this.v=a}clone(){return new n(this.tt,this.r,this.v)}sub(t){return new n(this.tt,this.r.sub(t.r),this.v.sub(t.v))}};function Yn(n){let[t,[e,a,r],[o,s,i]]=n;return new L0(t,new i0(e,a,r),new i0(o,s,i))}function Z0(n,t,e,a){let r=a/(a+Qt),o=Ut(W[e],t);return n.r.incr(o.r.mul(r)),n.v.incr(o.v.mul(r)),o}function V0(n,t,e){let a=e.sub(n),r=a.quadrature();return a.mul(t/(r*Math.sqrt(r)))}var U0=class{constructor(t){let e=new L0(t,new i0(0,0,0),new i0(0,0,0));this.Jupiter=Z0(e,t,p.Jupiter,_t),this.Saturn=Z0(e,t,p.Saturn,Tt),this.Uranus=Z0(e,t,p.Uranus,Et),this.Neptune=Z0(e,t,p.Neptune,bt),this.Jupiter.r.decr(e.r),this.Jupiter.v.decr(e.v),this.Saturn.r.decr(e.r),this.Saturn.v.decr(e.v),this.Uranus.r.decr(e.r),this.Uranus.v.decr(e.v),this.Neptune.r.decr(e.r),this.Neptune.v.decr(e.v),this.Sun=new L0(t,e.r.mul(-1),e.v.mul(-1))}Acceleration(t){let e=V0(t,Qt,this.Sun.r);return e.incr(V0(t,_t,this.Jupiter.r)),e.incr(V0(t,Tt,this.Saturn.r)),e.incr(V0(t,Et,this.Uranus.r)),e.incr(V0(t,bt,this.Neptune.r)),e}},ot=class n{constructor(t,e,a,r){this.tt=t,this.r=e,this.v=a,this.a=r}clone(){return new n(this.tt,this.r.clone(),this.v.clone(),this.a.clone())}},st=class{constructor(t,e){this.bary=t,this.grav=e}};function it(n,t,e,a){return new i0(t.x+n*(e.x+n*a.x/2),t.y+n*(e.y+n*a.y/2),t.z+n*(e.z+n*a.z/2))}function y1(n,t,e){return new i0(t.x+n*e.x,t.y+n*e.y,t.z+n*e.z)}function $t(n,t){let e=n-t.tt,a=new U0(n),r=it(e,t.r,t.v,t.a),o=a.Acceleration(r).mean(t.a),s=it(e,t.r,t.v,o),i=t.v.add(o.mul(e)),c=a.Acceleration(s),l=new ot(n,s,i,c);return new st(a,l)}var jn=[];function I1(n,t){let e=Math.floor(n);return e<0?0:e>=t?t-1:e}function Vt(n){let t=Yn(n),e=new U0(t.tt),a=t.r.add(e.Sun.r),r=t.v.add(e.Sun.v),o=e.Acceleration(a),s=new ot(t.tt,a,r,o);return new st(e,s)}function Bn(n,t){let e=x0[0][0];if(t<e||t>x0[Ot-1][0])return null;let a=I1((t-e)/Gn,Ot-1);if(!n[a]){let o=n[a]=[];o[0]=Vt(x0[a]).grav,o[s0-1]=Vt(x0[a+1]).grav;let s,i=o[0].tt;for(s=1;s<s0-1;++s)o[s]=$t(i+=P0,o[s-1]).grav;i=o[s0-1].tt;var r=[];for(r[s0-1]=o[s0-1],s=s0-2;s>0;--s)r[s]=$t(i-=P0,r[s+1]).grav;for(s=s0-2;s>0;--s){let c=s/(s0-1);o[s].r=o[s].r.mul(1-c).add(r[s].r.mul(c)),o[s].v=o[s].v.mul(1-c).add(r[s].v.mul(c)),o[s].a=o[s].a.mul(1-c).add(r[s].a.mul(c))}}return n[a]}function x1(n,t,e){let a=Vt(n),r=Math.ceil((t-a.grav.tt)/e);for(let o=0;o<r;++o)a=$t(o+1===r?t:a.grav.tt+e,a.grav);return a}function L1(n,t){let e,a,r,o=Bn(jn,n.tt);if(o){let s=I1((n.tt-o[0].tt)/P0,s0-1),i=o[s],c=o[s+1],l=i.a.mean(c.a),h=it(n.tt-i.tt,i.r,i.v,l),f=y1(n.tt-i.tt,i.v,l),M=it(n.tt-c.tt,c.r,c.v,l),x=y1(n.tt-c.tt,c.v,l),S=(n.tt-i.tt)/P0;e=h.mul(1-S).add(M.mul(S)),a=f.mul(1-S).add(x.mul(S))}else{let s;n.tt<x0[0][0]?s=x1(x0[0],n.tt,-P0):s=x1(x0[Ot-1],n.tt,+P0),e=s.grav.r,a=s.grav.v,r=s.bary}return t&&(r||(r=new U0(n.tt)),e=e.sub(r.Sun.r),a=a.sub(r.Sun.v)),new X(e.x,e.y,e.z,a.x,a.y,a.z,n)}var t2=new A0([[.999432765338654,-.0336771074697641,0],[.0303959428906285,.902057912352809,.430543388542295],[-.0144994559663353,-.430299169409101,.902569881273754]]);function w0(n,t){var e=$(t);if(n in W)return z0(W[n],e);if(n===p.Pluto){let s=L1(e,!0);return new I(s.x,s.y,s.z,e)}if(n===p.Sun)return new I(0,0,0,e);if(n===p.Moon){var a=z0(W.Earth,e),r=I0(e);return new I(a.x+r.x,a.y+r.y,a.z+r.z,e)}if(n===p.EMB){let s=z0(W.Earth,e),i=I0(e),c=1+Bt;return new I(s.x+i.x/c,s.y+i.y/c,s.z+i.z/c,e)}if(n===p.SSB)return Jn(e);let o=Wt(n);if(o){let s=new at(o.dec,15*o.ra,o.dist);return de(s,e)}throw`HelioVector: Unknown body "${n}"`}function Qn(n,t){let e=t,a=0;for(let r=0;r<10;++r){let o=n(e),s=o.Length()/Yt;if(s>1)throw"Object is too distant for light-travel solver.";let i=t.AddDays(-s);if(a=Math.abs(i.tt-e.tt),a<1e-9)return o;e=i}throw`Light-travel time solver did not converge: dt = ${a}`}var Ft=class{constructor(t,e,a,r){this.observerBody=t,this.targetBody=e,this.aberration=a,this.observerPos=r}Position(t){this.aberration&&(this.observerPos=w0(this.observerBody,t));let e=w0(this.targetBody,t);return new I(e.x-this.observerPos.x,e.y-this.observerPos.y,e.z-this.observerPos.z,t)}};function Wn(n,t,e,a){tt(a);let r=$(n);if(Wt(e)){let i=w0(e,r);if(a){let l=Zn(t,r),h=new I(i.x-l.x,i.y-l.y,i.z-l.z,r),f=Yt/h.Length();return new I(h.x+l.vx/f,h.y+l.vy/f,h.z+l.vz/f,r)}let c=w0(t,r);return new I(i.x-c.x,i.y-c.y,i.z-c.z,r)}let o;a?o=new I(0,0,0,r):o=w0(t,r);let s=new Ft(t,e,a,o);return Qn(i=>s.Position(i),r)}function Ht(n,t,e){tt(e);let a=$(t);switch(n){case p.Earth:return new I(0,0,0,a);case p.Moon:return I0(a);default:let r=Wn(a,p.Earth,n,e);return r.t=a,r}}function Xn(n,t){return new X(n.r.x,n.r.y,n.r.z,n.v.x,n.v.y,n.v.z,t)}function Zn(n,t){let e=$(t);switch(n){case p.Sun:return new X(0,0,0,0,0,0,e);case p.SSB:let a=new U0(e.tt);return new X(-a.Sun.r.x,-a.Sun.r.y,-a.Sun.r.z,-a.Sun.v.x,-a.Sun.v.y,-a.Sun.v.z,e);case p.Mercury:case p.Venus:case p.Earth:case p.Mars:case p.Jupiter:case p.Saturn:case p.Uranus:case p.Neptune:let r=Ut(W[n],e.tt);return Xn(r,e);case p.Pluto:return L1(e,!0);case p.Moon:case p.EMB:let o=Ut(W.Earth,e.tt),s=n==p.Moon?C1(e):qn(e);return new X(s.x+o.r.x,s.y+o.r.y,s.z+o.r.z,s.vx+o.v.x,s.vy+o.v.y,s.vz+o.v.z,e);default:if(Wt(n)){let i=w0(n,e);return new X(i.x,i.y,i.z,0,0,0,e)}throw`HelioState: Unsupported body "${n}"`}}function te(n,t,e,a,r){let o=(r+e)/2-a,s=(r-e)/2,i=a,c;if(o==0){if(s==0||(c=-i/s,c<-1||c>1))return null}else{let f=s*s-4*o*i;if(f<=0)return null;let M=Math.sqrt(f),x=(-s+M)/(2*o),S=(-s-M)/(2*o);if(-1<=x&&x<=1){if(-1<=S&&S<=1)return null;c=x}else if(-1<=S&&S<=1)c=S;else return null}let l=n+c*t,h=(2*o*c+s)/t;return{t:l,df_dt:h}}function ut(n,t,e,a){let r=N(a&&a.dt_tolerance_seconds||1),o=Math.abs(r/jt),s=a&&a.init_f1||n(t),i=a&&a.init_f2||n(e),c=NaN,l=0,h=a&&a.iter_limit||20,f=!0;for(;;){if(++l>h)throw"Excessive iteration in Search()";let M=Cn(t,e,.5),x=M.ut-t.ut;if(Math.abs(x)<o)return M;f?c=n(M):f=!0;let S=te(M.ut,e.ut-M.ut,s,c,i);if(S){let y=$(S.t),_=n(y);if(S.df_dt!==0){if(Math.abs(_/S.df_dt)<o)return y;let b=1.2*Math.abs(_/S.df_dt);if(b<x/10){let d=y.AddDays(-b),g=y.AddDays(+b);if((d.ut-t.ut)*(d.ut-e.ut)<0&&(g.ut-t.ut)*(g.ut-e.ut)<0){let v=n(d),w=n(g);if(v<0&&w>=0){s=v,i=w,t=d,e=g,c=_,f=!1;continue}}}}}if(s<0&&c>=0){e=M,i=c;continue}if(c<0&&i>=0){t=M,s=c;continue}return null}}function ne(n){let t=n;for(;t<=-180;)t+=360;for(;t>180;)t-=360;return t}function ee(n){for(;n<0;)n+=360;for(;n>=360;)n-=360;return n}function ae(n,t,e){if(n===p.Earth||t===p.Earth)throw"The Earth does not have a longitude as seen from itself.";let a=$(e),r=Ht(n,a,!1),o=zt(r),s=Ht(t,a,!1),i=zt(s);return ee(o.elon-i.elon)}function re(n,t,e,a){let r,o=0,s=0,i=0;switch(n){case p.Mercury:r=-.6,o=4.98,s=-4.88,i=3.02;break;case p.Venus:t<163.6?(r=-4.47,o=1.03,s=.57,i=.13):(r=.98,o=-1.02);break;case p.Mars:r=-1.52,o=1.6;break;case p.Jupiter:r=-9.4,o=.5;break;case p.Uranus:r=-7.19,o=.25;break;case p.Neptune:r=-6.87;break;case p.Pluto:r=-1,o=4;break;default:throw`VisualMagnitude: unsupported body ${n}`}let c=t/100,l=r+c*(o+c*(s+c*i));return l+=5*Math.log10(e*a),l}function oe(n,t,e,a,r){let o=zt(a),s=z*28.06,i=z*(169.51+382e-7*r.tt),c=z*o.elat,l=z*o.elon,h=Math.asin(Math.sin(c)*Math.cos(s)-Math.cos(c)*Math.sin(s)*Math.sin(l-i)),f=Math.sin(Math.abs(h)),M=-9+.044*n;return M+=f*(-2.6+1.2*f),M+=5*Math.log10(t*e),{mag:M,ring_tilt:Z*h}}function se(n,t,e){let a=n*z,r=a*a,o=r*r,s=-12.717+1.49*Math.abs(a)+.0431*o,i=385000.6/Q,c=e/i;return s+=5*Math.log10(t*c),s}var Kt=class{constructor(t,e,a,r,o,s,i,c){this.time=t,this.mag=e,this.phase_angle=a,this.helio_dist=r,this.geo_dist=o,this.gc=s,this.hc=i,this.ring_tilt=c,this.phase_fraction=(1+Math.cos(z*a))/2}};function U1(n,t){if(n===p.Earth)throw"The illumination of the Earth is not defined.";let e=$(t),a=z0(W.Earth,e),r,o,s,i;n===p.Sun?(s=new I(-a.x,-a.y,-a.z,e),o=new I(0,0,0,e),r=0):(n===p.Moon?(s=I0(e),o=new I(a.x+s.x,a.y+s.y,a.z+s.z,e)):(o=w0(n,t),s=new I(o.x-a.x,o.y-a.y,o.z-a.z,e)),r=Tn(s,o));let c=s.Length(),l=o.Length(),h;if(n===p.Sun)i=mn+5*Math.log10(c);else if(n===p.Moon)i=se(r,l,c);else if(n===p.Saturn){let f=oe(r,l,c,s,e);i=f.mag,h=f.ring_tilt}else i=re(n,r,l,c);return new Kt(e,i,r,l,c,s,o,h)}function t1(n){return ae(p.Moon,p.Sun,n)}function O0(n,t,e){function a(M){let x=t1(M);return ne(x-n)}N(n),N(e);let r=1.5,o=$(t),s=a(o),i,c,l;if(e<0){if(s<0&&(s+=360),i=-(p1*s)/360,l=i+r,l<e)return null;c=Math.max(e,i-r)}else{if(s>0&&(s-=360),i=-(p1*s)/360,c=i-r,c>e)return null;l=Math.min(e,i+r)}let h=o.AddDays(c),f=o.AddDays(l);return ut(a,h,f,{dt_tolerance_seconds:.1})}var qt=class{constructor(t,e,a){this.pressure=t,this.temperature=e,this.density=a}};function ie(n){if(!Number.isFinite(n)||n<-500||n>1e5)throw`Invalid elevation: ${n}`;let r,o;n<=11e3?(r=288.15-.0065*n,o=101325*Math.pow(288.15/r,-5.25577)):n<=2e4?(r=216.65,o=22632*Math.exp(-.00015768832*(n-11e3))):(r=216.65+.001*(n-2e4),o=5474.87*Math.pow(216.65/r,34.16319));let s=o/r/(101325/288.15);return new qt(o,r,s)}function ce(n,t){let e=n.latitude*z,a=Math.sin(e),r=Math.cos(e),o=1/Math.hypot(r,a*S0),s=o*(S0*S0),i=(n.height-t)/1e3,c=C0*o+i,l=C0*s+i,h=1e3*Math.hypot(c*r,l*a),f=.175*Math.pow(1-.0065/283.15*(n.height-2/3*t),3.256);return Z*-(Math.sqrt(2*(1-f)*t/h)/(1-f))}function ue(n){switch(n){case p.Sun:return gn;case p.Moon:return Dn;default:return 0}}function O1(n,t,e,a,r,o=0){if(!Number.isFinite(o)||o<0)throw`Invalid value for metersAboveGround: ${o}`;let s=ue(n),i=ie(t.height-o),l=ce(t,o)-kn*i.density;return le(n,t,e,a,r,s,l)}var Jt=class{constructor(t,e,a,r){this.tx=t,this.ty=e,this.ax=a,this.ay=r}};function Gt(n,t,e,a,r,o,s){if(o<0&&s>=0)return new Jt(a,r,o,s);if(o>=0&&s<0)return null;if(n>17)throw"Excessive recursion in rise/set ascent search.";let i=r.ut-a.ut;if(i*jt<1||Math.min(Math.abs(o),Math.abs(s))>e*(i/2))return null;let l=new N0((a.ut+r.ut)/2),h=t(l);return Gt(1+n,t,e,a,l,o,h)||Gt(1+n,t,e,l,r,h,s)}function he(n,t){if(t<-90||t>90)throw`Invalid geographic latitude: ${t}`;let e,a;switch(n){case p.Moon:e=4.5,a=8.2;break;case p.Sun:e=.8,a=.5;break;case p.Mercury:e=-1.6,a=1;break;case p.Venus:e=-.8,a=.6;break;case p.Mars:e=-.5,a=.4;break;case p.Jupiter:case p.Saturn:case p.Uranus:case p.Neptune:case p.Pluto:e=-.2,a=.2;break;case p.Star1:case p.Star2:case p.Star3:case p.Star4:case p.Star5:case p.Star6:case p.Star7:case p.Star8:e=-.008,a=.008;break;default:throw`Body not allowed for altitude search: ${n}`}let r=z*t;return Math.abs((360/pn-e)*Math.cos(r))+Math.abs(a*Math.sin(r))}function le(n,t,e,a,r,o,s){if(ct(t),N(r),N(o),N(s),s<-90||s>90)throw`Invalid target altitude angle: ${s}`;let i=.42,c=he(n,t.latitude);function l(y){let _=Kn(n,y,t,!0,!0),d=Hn(y,t,_.ra,_.dec).altitude+Z*Math.asin(o/_.dist);return e*(d-s)}let h=$(a),f=h,M=h,x=l(f),S=x;for(;;){r<0?(f=M.AddDays(-i),x=l(f)):(M=f.AddDays(+i),S=l(M));let y=Gt(0,l,c,f,M,x,S);if(y){let _=ut(l,y.tx,y.ty,{dt_tolerance_seconds:.1,init_f1:y.ax,init_f2:y.ay});if(_){if(r<0){if(_.ut<h.ut+r)return null}else if(_.ut>h.ut+r)return null;return _}throw`Rise/set search failed after finding ascent: t1=${f}, t2=${M}, a1=${x}, a2=${S}`}if(r<0){if(f.ut<h.ut+r)return null;M=f,S=x}else{if(M.ut>h.ut+r)return null;f=M,x=S}}}var S1;(function(n){n[n.Pericenter=0]="Pericenter",n[n.Apocenter=1]="Apocenter"})(S1||(S1={}));function de(n,t){t=$(t);let e=n.lat*z,a=n.lon*z,r=n.dist*Math.cos(e);return new I(r*Math.cos(a),r*Math.sin(a),n.dist*Math.sin(e),t)}function fe(n,t){let e;if(N(t),t<-90||t>90)return 0;if(n==="normal"||n==="jplhor"){let a=t;a<-1&&(a=-1),e=1.02/Math.tan((a+10.3/(a+5.11))*z)/60,n==="normal"&&t<-1&&(e*=(t+90)/89)}else if(!n)e=0;else throw`Invalid refraction option: ${n}`;return e}var w1;(function(n){n.Penumbral="penumbral",n.Partial="partial",n.Annular="annular",n.Total="total"})(w1||(w1={}));var A1;(function(n){n[n.Invalid=0]="Invalid",n[n.Ascending=1]="Ascending",n[n.Descending=-1]="Descending"})(A1||(A1={}));var q0=n=>(n%360+360)%360,me=n=>{let t=q0(n);return t>=180?t-360:t};function V1(n){let t=$(n).tt/36525;return 23.85305+1.39697*t+3086e-7*t*t}function pe(n){return R1(n).elon}function Me(n){return z1(n).lon}function d0(n){return q0(pe(n)-V1(n))}function $0(n){return q0(Me(n)-V1(n))}function f0(n){return t1(n)}function F1(n){return q0(d0(n)+$0(n))}function H1(n){return U1(p.Moon,n).phase_fraction}function t0(n,t,e,a,r,o=1.2){let s=new H0(t,e,0),i=O1(n==="sun"?p.Sun:p.Moon,s,a,r,o);return i?i.date:null}function Y(n,t,e=3){let a=O0(q0(n),t,e);if(!a)throw new Error("moon phase search failed");return a.date}function J0(n,t,e,a=1.6){let r=c=>me(n(c.date)-t),o=$(e);r(o)>=0&&(o=o.AddDays(-1e-4));let s=o.AddDays(a),i=ut(r,o,s,{dt_tolerance_seconds:20});if(!i)throw new Error("crossing search failed");return i.date}function K1(n,t){return J0(d0,n*30,t,40)}var ht=new Map;function ge(n){if(!ht.has(n))try{ht.set(n,new Intl.DateTimeFormat("en-US",{timeZone:n,hourCycle:"h23",year:"numeric",month:"numeric",day:"numeric",hour:"numeric",minute:"numeric",second:"numeric"}))}catch{ht.set(n,null)}return ht.get(n)}function q1(n,t){let e=typeof t=="number"?t:t.getTime(),a=`${n.tz}:${Math.floor(e/9e5)}`,r=lt.get(a);if(r!==void 0)return r;let o=ye(n,e);return lt.size>5e3&&lt.clear(),lt.set(a,o),o}var lt=new Map;function ye(n,t){let e=ge(n.tz);if(!e)return n.offset;try{let a=xe(e,new Date(t));if(!a)return n.offset;let r=Date.UTC(a.year,a.month-1,a.day,a.hour%24,a.minute,a.second);return Math.round((r-Math.floor(t/1e3)*1e3)/6e4)}catch{return n.offset}}function xe(n,t){if(typeof n.formatToParts=="function"){let a={};for(let r of n.formatToParts(t))r.type!=="literal"&&(a[r.type]=Number(r.value));if(a.year&&a.month&&a.day&&a.hour!=null)return a}let e=/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/.exec(n.format(t));return e?{month:+e[1],day:+e[2],year:+e[3],hour:+e[4],minute:+e[5],second:+e[6]}:null}function dt(n,t){let e=Date.UTC(n.y,n.m-1,n.d),a=e-t.offset*6e4;for(let r=0;r<2;r++)a=e-q1(t,a)*6e4;return new Date(a)}function G0(n,t){let e=typeof n=="number"?n:n.getTime(),a=new Date(e+q1(t,e)*6e4);return{y:a.getUTCFullYear(),m:a.getUTCMonth()+1,d:a.getUTCDate(),h:a.getUTCHours(),min:a.getUTCMinutes(),dow:a.getUTCDay()}}function J1(n,t=Date.now()){let e=G0(t,n);return{y:e.y,m:e.m,d:e.d}}function G(n,t){let e=new Date(Date.UTC(n.y,n.m-1,n.d+t));return{y:e.getUTCFullYear(),m:e.getUTCMonth()+1,d:e.getUTCDate()}}function Y0(n){return new Date(Date.UTC(n.y,n.m-1,n.d)).getUTCDay()}function D0(n){return`${n.y}-${String(n.m).padStart(2,"0")}-${String(n.d).padStart(2,"0")}`}function v0(n,t){return Math.round((Date.UTC(t.y,t.m-1,t.d)-Date.UTC(n.y,n.m-1,n.d))/864e5)}var j0=360/27,e1=6e4,n1=864e5,Se=[8,2,7,5,6,4,3],we=[5,4,3,2,1,7,6],Ae=[7,6,5,4,3,2,1],ft=["udveg","char","labh","amrit","kaal","shubh","rog"],De=["udveg","amrit","rog","labh","shubh","char","kaal"],ve=["shubh","char","kaal","udveg","amrit","rog","labh"],ke=[42,48,54,52,38,35,54,44,56,54,44,42,45,44,38,44,46,48,56,48,44,42,44,42,40,48,54],_e=[50,24,30,40,14,21,30,20,32,30,20,18,21,20,14,14,10,14,20,24,20,10,10,18,16,24,30],mt=(n,t,e)=>({start:new Date(n.getTime()+(e-1)*t),end:new Date(n.getTime()+e*t)});function a1(n,t,e,a,r,o,s){let i=[],c=n(o),l=a(c,o),h=0;for(;h++<6;){let f=r(c,o);if(i.push({value:c,start:l,end:f}),f>=s)break;l=f,o=new Date(f.getTime()+e1),c=e(c)}return i}function Te(n,t){return a1(e=>Math.floor(f0(e)/12)+1,e=>e*12,e=>e%30+1,(e,a)=>Y((e-1)*12,new Date(a.getTime()-1.4*864e5),2),(e,a)=>Y(e*12,a,2),n,t)}function Ee(n,t){return a1(e=>Math.floor(f0(e)/6),e=>(e+1)*6,e=>(e+1)%60,(e,a)=>Y(e*6,new Date(a.getTime()-.8*864e5),1.2),(e,a)=>Y((e+1)*6,a,1.2),n,t)}function G1(n,t,e){return a1(a=>Math.floor(n(a)/j0),a=>(a+1)*j0,a=>(a+1)%27,(a,r)=>J0(n,a*j0,new Date(r.getTime()-1.3*864e5),1.4),(a,r)=>J0(n,(a+1)%27*j0,r,1.6),t,e)}var Y1=new Map;function j1(n){for(let c of Y1.values())if(n.getTime()>=c.start&&n.getTime()<c.end)return{...c.m,start:new Date(c.start),end:new Date(c.end)};let t=O0(0,new Date(n.getTime()-30.5*n1),31).date,e=O0(0,new Date(t.getTime()+n1),31).date;e<=n&&(t=e,e=O0(0,new Date(t.getTime()+n1),31).date);let a=Math.floor(d0(t)/30),r=Math.floor(d0(e)/30),o=a===r,s=(a+1)%12,i={amanta:s,purnimanta:s,adhik:o};return Y1.set(t.getTime(),{start:t.getTime(),end:e.getTime(),m:i}),{...i,start:t,end:e}}function B1(n,t){return t&&!n.adhik?(n.amanta+1)%12:n.amanta}function be(n,t,e,a){let r=[],o=(t.getTime()-n.getTime())/8,s=(e.getTime()-t.getTime())/8,i=ft.indexOf(De[a]);for(let c=0;c<8;c++)r.push({kind:ft[(i+c)%7],night:!1,start:new Date(n.getTime()+c*o),end:new Date(n.getTime()+(c+1)*o)});i=ft.indexOf(ve[a]);for(let c=0;c<8;c++)r.push({kind:ft[(i+5*c)%7],night:!0,start:new Date(t.getTime()+c*s),end:new Date(t.getTime()+(c+1)*s)});return r}var pt=new Map;function B0(n,t){let e=`${t.id}:${n.y}-${n.m}-${n.d}`,a=pt.get(e);if(a)return a;let r=dt(n,t),o=t0("sun",t.lat,t.lon,1,r)??new Date(r.getTime()+6*36e5),s=t0("sun",t.lat,t.lon,-1,o)??new Date(o.getTime()+12*36e5),i=t0("sun",t.lat,t.lon,1,s)??new Date(o.getTime()+24*36e5),c=dt(G(n,1),t),l=t0("moon",t.lat,t.lon,1,r,1),h=t0("moon",t.lat,t.lon,-1,r,1),f=l&&l<c?l:null,M=h&&h<c?h:null,x=Y0(n),S=Te(o,i),y=G1($0,o,i),_=G1(F1,o,i),b=Ee(o,i),d=S[0].value,g=d<=15?"shukla":"krishna",v=j1(o),w={amanta:v.amanta,adhik:v.adhik,purnimanta:B1(v,g==="krishna")},P=d0(o),T=$0(o),D=Math.floor(T/30),L=null;if(((D+1)*30-T)/12<1.3){let O=J0($0,(D+1)%12*30,o,1.4);O<i&&(L={rashi:(D+1)%12,at:O})}let K=s.getTime()-o.getTime(),J=K/8,n0=K/15,c0=(i.getTime()-s.getTime())/15,j=o.getTime()+K/2,e0=[],a0=[];for(let O of y){let k0=O.end.getTime()-O.start.getTime(),_0=y0=>({start:new Date(O.start.getTime()+k0*y0/60),end:new Date(O.start.getTime()+k0*(y0+4)/60)}),M0=_0(ke[O.value]),g0=_0(_e[O.value]);M0.end>o&&M0.start<i&&e0.push(M0),g0.end>o&&g0.start<i&&a0.push(g0)}let u0=f0(o),p0=n.m<=4&&v.amanta>=9?n.y+56:n.y+57,R={date:n,city:t,weekday:x,sunrise:o,sunset:s,nextSunrise:i,moonrise:f,moonset:M,tithi:d,tithis:S,nakshatras:y,yogas:_,karanas:b,paksha:g,month:w,sunRashi:Math.floor(P/30),moonRashi:D,moonRashiNext:L,ritu:Math.floor(v.amanta/2),ayana:P>=270||P<90?"uttara":"dakshina",vikramSamvat:p0,shakaSamvat:p0-135,illumination:H1(o),elongation:u0,rahuKaal:mt(o,J,Se[x]),yamaganda:mt(o,J,we[x]),gulika:mt(o,J,Ae[x]),abhijit:x===3?null:{start:new Date(j-n0/2),end:new Date(j+n0/2)},brahmaMuhurat:{start:new Date(o.getTime()-2*c0),end:new Date(o.getTime()-c0)},vijayMuhurat:mt(o,n0,11),godhuli:{start:new Date(s.getTime()-12*e1),end:new Date(s.getTime()+12*e1)},amritKaal:e0,varjyam:a0,choghadiya:be(o,s,i,x),nextPurnima:Y(180,o,31),nextAmavasya:Y(0,o,31)};return pt.size>400&&pt.clear(),pt.set(e,R),R}var Mt=new Map;function m0(n,t){let e=`${t.id}:${n.y}-${n.m}-${n.d}`,a=Mt.get(e);if(a)return a;let r=dt(n,t),o=t0("sun",t.lat,t.lon,1,r)??new Date(r.getTime()+6*36e5),s=t0("sun",t.lat,t.lon,-1,o)??new Date(o.getTime()+12*36e5),i=Math.floor(f0(o)/12)+1,c=j1(o),l={date:n,sunrise:o,sunset:s,tithi:i,tithiAtSunset:Math.floor(f0(s)/12)+1,month:{amanta:c.amanta,adhik:c.adhik,purnimanta:B1(c,i>15)},nakshatra:Math.floor($0(o)/j0),weekday:Y0(n)};return Mt.size>2e3&&Mt.clear(),Mt.set(e,l),l}var i1={};l1(i1,{AMAVASYA:()=>W1,AYANA:()=>Ke,CHOGHADIYA:()=>o1,EKADASHI:()=>s1,GREG_MONTH:()=>Ve,GREG_MONTH_SHORT:()=>Fe,LUNAR_MONTH:()=>gt,NAKSHATRA:()=>ze,PAKSHA:()=>Re,RASHI:()=>r1,RASHI_WESTERN:()=>Ue,RITU:()=>He,TITHI:()=>Q1,WEEKDAY:()=>Oe,WEEKDAY_SHORT:()=>$e,YOGA:()=>Ce,isVishti:()=>Le,karanaName:()=>Ie,tithiName:()=>Pe});var u=(n,t)=>({hi:n,en:t}),Q1=[u("\u092A\u094D\u0930\u0924\u093F\u092A\u0926\u093E","Pratipada"),u("\u0926\u094D\u0935\u093F\u0924\u0940\u092F\u093E","Dwitiya"),u("\u0924\u0943\u0924\u0940\u092F\u093E","Tritiya"),u("\u091A\u0924\u0941\u0930\u094D\u0925\u0940","Chaturthi"),u("\u092A\u0902\u091A\u092E\u0940","Panchami"),u("\u0937\u0937\u094D\u0920\u0940","Shashthi"),u("\u0938\u092A\u094D\u0924\u092E\u0940","Saptami"),u("\u0905\u0937\u094D\u091F\u092E\u0940","Ashtami"),u("\u0928\u0935\u092E\u0940","Navami"),u("\u0926\u0936\u092E\u0940","Dashami"),u("\u090F\u0915\u093E\u0926\u0936\u0940","Ekadashi"),u("\u0926\u094D\u0935\u093E\u0926\u0936\u0940","Dwadashi"),u("\u0924\u094D\u0930\u092F\u094B\u0926\u0936\u0940","Trayodashi"),u("\u091A\u0924\u0941\u0930\u094D\u0926\u0936\u0940","Chaturdashi"),u("\u092A\u0942\u0930\u094D\u0923\u093F\u092E\u093E","Purnima")],W1=u("\u0905\u092E\u093E\u0935\u0938\u094D\u092F\u093E","Amavasya");function Pe(n){return n===30?W1:Q1[(n-1)%15]}var Re={shukla:u("\u0936\u0941\u0915\u094D\u0932","Shukla"),krishna:u("\u0915\u0943\u0937\u094D\u0923","Krishna")},ze=[u("\u0905\u0936\u094D\u0935\u093F\u0928\u0940","Ashwini"),u("\u092D\u0930\u0923\u0940","Bharani"),u("\u0915\u0943\u0924\u094D\u0924\u093F\u0915\u093E","Krittika"),u("\u0930\u094B\u0939\u093F\u0923\u0940","Rohini"),u("\u092E\u0943\u0917\u0936\u093F\u0930\u093E","Mrigashira"),u("\u0906\u0930\u094D\u0926\u094D\u0930\u093E","Ardra"),u("\u092A\u0941\u0928\u0930\u094D\u0935\u0938\u0941","Punarvasu"),u("\u092A\u0941\u0937\u094D\u092F","Pushya"),u("\u0906\u0936\u094D\u0932\u0947\u0937\u093E","Ashlesha"),u("\u092E\u0918\u093E","Magha"),u("\u092A\u0942\u0930\u094D\u0935\u093E \u092B\u093E\u0932\u094D\u0917\u0941\u0928\u0940","Purva Phalguni"),u("\u0909\u0924\u094D\u0924\u0930\u093E \u092B\u093E\u0932\u094D\u0917\u0941\u0928\u0940","Uttara Phalguni"),u("\u0939\u0938\u094D\u0924","Hasta"),u("\u091A\u093F\u0924\u094D\u0930\u093E","Chitra"),u("\u0938\u094D\u0935\u093E\u0924\u0940","Swati"),u("\u0935\u093F\u0936\u093E\u0916\u093E","Vishakha"),u("\u0905\u0928\u0941\u0930\u093E\u0927\u093E","Anuradha"),u("\u091C\u094D\u092F\u0947\u0937\u094D\u0920\u093E","Jyeshtha"),u("\u092E\u0942\u0932","Mula"),u("\u092A\u0942\u0930\u094D\u0935\u093E\u0937\u093E\u0922\u093C\u093E","Purva Ashadha"),u("\u0909\u0924\u094D\u0924\u0930\u093E\u0937\u093E\u0922\u093C\u093E","Uttara Ashadha"),u("\u0936\u094D\u0930\u0935\u0923","Shravana"),u("\u0927\u0928\u093F\u0937\u094D\u0920\u093E","Dhanishtha"),u("\u0936\u0924\u092D\u093F\u0937\u093E","Shatabhisha"),u("\u092A\u0942\u0930\u094D\u0935\u093E \u092D\u093E\u0926\u094D\u0930\u092A\u0926","Purva Bhadrapada"),u("\u0909\u0924\u094D\u0924\u0930\u093E \u092D\u093E\u0926\u094D\u0930\u092A\u0926","Uttara Bhadrapada"),u("\u0930\u0947\u0935\u0924\u0940","Revati")],Ce=[u("\u0935\u093F\u0937\u094D\u0915\u0941\u092E\u094D\u092D","Vishkambha"),u("\u092A\u094D\u0930\u0940\u0924\u093F","Priti"),u("\u0906\u092F\u0941\u0937\u094D\u092E\u093E\u0928","Ayushman"),u("\u0938\u094C\u092D\u093E\u0917\u094D\u092F","Saubhagya"),u("\u0936\u094B\u092D\u0928","Shobhana"),u("\u0905\u0924\u093F\u0917\u0923\u094D\u0921","Atiganda"),u("\u0938\u0941\u0915\u0930\u094D\u092E\u093E","Sukarma"),u("\u0927\u0943\u0924\u093F","Dhriti"),u("\u0936\u0942\u0932","Shula"),u("\u0917\u0923\u094D\u0921","Ganda"),u("\u0935\u0943\u0926\u094D\u0927\u093F","Vriddhi"),u("\u0927\u094D\u0930\u0941\u0935","Dhruva"),u("\u0935\u094D\u092F\u093E\u0918\u093E\u0924","Vyaghata"),u("\u0939\u0930\u094D\u0937\u0923","Harshana"),u("\u0935\u091C\u094D\u0930","Vajra"),u("\u0938\u093F\u0926\u094D\u0927\u093F","Siddhi"),u("\u0935\u094D\u092F\u0924\u0940\u092A\u093E\u0924","Vyatipata"),u("\u0935\u0930\u0940\u092F\u093E\u0928","Variyana"),u("\u092A\u0930\u093F\u0918","Parigha"),u("\u0936\u093F\u0935","Shiva"),u("\u0938\u093F\u0926\u094D\u0927","Siddha"),u("\u0938\u093E\u0927\u094D\u092F","Sadhya"),u("\u0936\u0941\u092D","Shubha"),u("\u0936\u0941\u0915\u094D\u0932","Shukla"),u("\u092C\u094D\u0930\u0939\u094D\u092E","Brahma"),u("\u0907\u0928\u094D\u0926\u094D\u0930","Indra"),u("\u0935\u0948\u0927\u0943\u0924\u093F","Vaidhriti")],Ne=[u("\u092C\u0935","Bava"),u("\u092C\u093E\u0932\u0935","Balava"),u("\u0915\u094C\u0932\u0935","Kaulava"),u("\u0924\u0948\u0924\u093F\u0932","Taitila"),u("\u0917\u0930","Gara"),u("\u0935\u0923\u093F\u091C","Vanija"),u("\u0935\u093F\u0937\u094D\u091F\u093F (\u092D\u0926\u094D\u0930\u093E)","Vishti (Bhadra)")];function Ie(n){return n===0?u("\u0915\u093F\u0902\u0938\u094D\u0924\u0941\u0918\u094D\u0928","Kimstughna"):n===57?u("\u0936\u0915\u0941\u0928\u093F","Shakuni"):n===58?u("\u091A\u0924\u0941\u0937\u094D\u092A\u0926","Chatushpada"):n===59?u("\u0928\u093E\u0917","Naga"):Ne[(n-1)%7]}function Le(n){return n>0&&n<57&&(n-1)%7===6}var gt=[u("\u091A\u0948\u0924\u094D\u0930","Chaitra"),u("\u0935\u0948\u0936\u093E\u0916","Vaishakha"),u("\u091C\u094D\u092F\u0947\u0937\u094D\u0920","Jyeshtha"),u("\u0906\u0937\u093E\u0922\u093C","Ashadha"),u("\u0936\u094D\u0930\u093E\u0935\u0923","Shravana"),u("\u092D\u093E\u0926\u094D\u0930\u092A\u0926","Bhadrapada"),u("\u0906\u0936\u094D\u0935\u093F\u0928","Ashwin"),u("\u0915\u093E\u0930\u094D\u0924\u093F\u0915","Kartika"),u("\u092E\u093E\u0930\u094D\u0917\u0936\u0940\u0930\u094D\u0937","Margashirsha"),u("\u092A\u094C\u0937","Pausha"),u("\u092E\u093E\u0918","Magha"),u("\u092B\u093E\u0932\u094D\u0917\u0941\u0928","Phalguna")],r1=[u("\u092E\u0947\u0937","Mesha"),u("\u0935\u0943\u0937\u092D","Vrishabha"),u("\u092E\u093F\u0925\u0941\u0928","Mithuna"),u("\u0915\u0930\u094D\u0915","Karka"),u("\u0938\u093F\u0902\u0939","Simha"),u("\u0915\u0928\u094D\u092F\u093E","Kanya"),u("\u0924\u0941\u0932\u093E","Tula"),u("\u0935\u0943\u0936\u094D\u091A\u093F\u0915","Vrishchika"),u("\u0927\u0928\u0941","Dhanu"),u("\u092E\u0915\u0930","Makara"),u("\u0915\u0941\u092E\u094D\u092D","Kumbha"),u("\u092E\u0940\u0928","Meena")],Ue=["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"],Oe=[u("\u0930\u0935\u093F\u0935\u093E\u0930","Sunday"),u("\u0938\u094B\u092E\u0935\u093E\u0930","Monday"),u("\u092E\u0902\u0917\u0932\u0935\u093E\u0930","Tuesday"),u("\u092C\u0941\u0927\u0935\u093E\u0930","Wednesday"),u("\u0917\u0941\u0930\u0941\u0935\u093E\u0930","Thursday"),u("\u0936\u0941\u0915\u094D\u0930\u0935\u093E\u0930","Friday"),u("\u0936\u0928\u093F\u0935\u093E\u0930","Saturday")],$e=[u("\u0930\u0935\u093F","Sun"),u("\u0938\u094B\u092E","Mon"),u("\u092E\u0902\u0917\u0932","Tue"),u("\u092C\u0941\u0927","Wed"),u("\u0917\u0941\u0930\u0941","Thu"),u("\u0936\u0941\u0915\u094D\u0930","Fri"),u("\u0936\u0928\u093F","Sat")],Ve=[u("\u091C\u0928\u0935\u0930\u0940","January"),u("\u092B\u093C\u0930\u0935\u0930\u0940","February"),u("\u092E\u093E\u0930\u094D\u091A","March"),u("\u0905\u092A\u094D\u0930\u0948\u0932","April"),u("\u092E\u0908","May"),u("\u091C\u0942\u0928","June"),u("\u091C\u0941\u0932\u093E\u0908","July"),u("\u0905\u0917\u0938\u094D\u0924","August"),u("\u0938\u093F\u0924\u0902\u092C\u0930","September"),u("\u0905\u0915\u094D\u091F\u0942\u092C\u0930","October"),u("\u0928\u0935\u0902\u092C\u0930","November"),u("\u0926\u093F\u0938\u0902\u092C\u0930","December")],Fe=[u("\u091C\u0928","Jan"),u("\u092B\u093C\u0930","Feb"),u("\u092E\u093E\u0930\u094D\u091A","Mar"),u("\u0905\u092A\u094D\u0930\u0948","Apr"),u("\u092E\u0908","May"),u("\u091C\u0942\u0928","Jun"),u("\u091C\u0941\u0932\u093E","Jul"),u("\u0905\u0917","Aug"),u("\u0938\u093F\u0924\u0902","Sep"),u("\u0905\u0915\u094D\u091F\u0942","Oct"),u("\u0928\u0935\u0902","Nov"),u("\u0926\u093F\u0938\u0902","Dec")],He=[u("\u0935\u0938\u0902\u0924","Vasant (spring)"),u("\u0917\u094D\u0930\u0940\u0937\u094D\u092E","Grishma (summer)"),u("\u0935\u0930\u094D\u0937\u093E","Varsha (monsoon)"),u("\u0936\u0930\u0926","Sharad (autumn)"),u("\u0939\u0947\u092E\u0902\u0924","Hemant (pre-winter)"),u("\u0936\u093F\u0936\u093F\u0930","Shishir (winter)")],Ke={uttara:u("\u0909\u0924\u094D\u0924\u0930\u093E\u092F\u0923","Uttarayana"),dakshina:u("\u0926\u0915\u094D\u0937\u093F\u0923\u093E\u092F\u0928","Dakshinayana")},o1={udveg:{...u("\u0909\u0926\u094D\u0935\u0947\u0917","Udveg"),quality:"avoid"},char:{...u("\u091A\u0930","Char"),quality:"neutral"},labh:{...u("\u0932\u093E\u092D","Labh"),quality:"good"},amrit:{...u("\u0905\u092E\u0943\u0924","Amrit"),quality:"good"},kaal:{...u("\u0915\u093E\u0932","Kaal"),quality:"avoid"},shubh:{...u("\u0936\u0941\u092D","Shubh"),quality:"good"},rog:{...u("\u0930\u094B\u0917","Rog"),quality:"avoid"}},s1={"0s":u("\u0915\u093E\u092E\u0926\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Kamada Ekadashi"),"0k":u("\u0935\u0930\u0942\u0925\u093F\u0928\u0940 \u090F\u0915\u093E\u0926\u0936\u0940","Varuthini Ekadashi"),"1s":u("\u092E\u094B\u0939\u093F\u0928\u0940 \u090F\u0915\u093E\u0926\u0936\u0940","Mohini Ekadashi"),"1k":u("\u0905\u092A\u0930\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Apara Ekadashi"),"2s":u("\u0928\u093F\u0930\u094D\u091C\u0932\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Nirjala Ekadashi"),"2k":u("\u092F\u094B\u0917\u093F\u0928\u0940 \u090F\u0915\u093E\u0926\u0936\u0940","Yogini Ekadashi"),"3s":u("\u0926\u0947\u0935\u0936\u092F\u0928\u0940 \u090F\u0915\u093E\u0926\u0936\u0940","Devshayani Ekadashi"),"3k":u("\u0915\u093E\u092E\u093F\u0915\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Kamika Ekadashi"),"4s":u("\u0936\u094D\u0930\u093E\u0935\u0923 \u092A\u0941\u0924\u094D\u0930\u0926\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Shravana Putrada Ekadashi"),"4k":u("\u0905\u091C\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Aja Ekadashi"),"5s":u("\u092A\u0930\u093F\u0935\u0930\u094D\u0924\u093F\u0928\u0940 \u090F\u0915\u093E\u0926\u0936\u0940","Parivartini Ekadashi"),"5k":u("\u0907\u0902\u0926\u093F\u0930\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Indira Ekadashi"),"6s":u("\u092A\u093E\u092A\u093E\u0902\u0915\u0941\u0936\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Papankusha Ekadashi"),"6k":u("\u0930\u092E\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Rama Ekadashi"),"7s":u("\u0926\u0947\u0935\u0909\u0920\u0928\u0940 \u090F\u0915\u093E\u0926\u0936\u0940","Devutthana Ekadashi"),"7k":u("\u0909\u0924\u094D\u092A\u0928\u094D\u0928\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Utpanna Ekadashi"),"8s":u("\u092E\u094B\u0915\u094D\u0937\u0926\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Mokshada Ekadashi"),"8k":u("\u0938\u092B\u0932\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Saphala Ekadashi"),"9s":u("\u092A\u094C\u0937 \u092A\u0941\u0924\u094D\u0930\u0926\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Pausha Putrada Ekadashi"),"9k":u("\u0937\u091F\u0924\u093F\u0932\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Shattila Ekadashi"),"10s":u("\u091C\u092F\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Jaya Ekadashi"),"10k":u("\u0935\u093F\u091C\u092F\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Vijaya Ekadashi"),"11s":u("\u0906\u092E\u0932\u0915\u0940 \u090F\u0915\u093E\u0926\u0936\u0940","Amalaki Ekadashi"),"11k":u("\u092A\u093E\u092A\u092E\u094B\u091A\u0928\u0940 \u090F\u0915\u093E\u0926\u0936\u0940","Papmochani Ekadashi"),"12s":u("\u092A\u0926\u094D\u092E\u093F\u0928\u0940 \u090F\u0915\u093E\u0926\u0936\u0940","Padmini Ekadashi"),"12k":u("\u092A\u0930\u092E\u093E \u090F\u0915\u093E\u0926\u0936\u0940","Parama Ekadashi")};var A=(n,t)=>({hi:n,en:t}),qe=[{id:"chaitra-navratri",name:A("\u091A\u0948\u0924\u094D\u0930 \u0928\u0935\u0930\u093E\u0924\u094D\u0930\u093F \xB7 \u0917\u0941\u0921\u093C\u0940 \u092A\u0921\u093C\u0935\u093E","Chaitra Navratri \xB7 Gudi Padwa"),month:0,tithi:1},{id:"ram-navami",name:A("\u0930\u093E\u092E \u0928\u0935\u092E\u0940","Ram Navami"),month:0,tithi:9,at:"midday"},{id:"hanuman-jayanti",name:A("\u0939\u0928\u0941\u092E\u093E\u0928 \u091C\u092F\u0902\u0924\u0940","Hanuman Jayanti"),month:0,tithi:15},{id:"akshaya-tritiya",name:A("\u0905\u0915\u094D\u0937\u092F \u0924\u0943\u0924\u0940\u092F\u093E","Akshaya Tritiya"),month:1,tithi:3,at:"purvahna"},{id:"buddha-purnima",name:A("\u092C\u0941\u0926\u094D\u0927 \u092A\u0942\u0930\u094D\u0923\u093F\u092E\u093E","Buddha Purnima"),month:1,tithi:15},{id:"ganga-dussehra",name:A("\u0917\u0902\u0917\u093E \u0926\u0936\u0939\u0930\u093E","Ganga Dussehra"),month:2,tithi:10},{id:"vat-savitri",name:A("\u0935\u091F \u0938\u093E\u0935\u093F\u0924\u094D\u0930\u0940 \u0935\u094D\u0930\u0924","Vat Savitri Vrat"),month:1,tithi:30,kind:"vrat"},{id:"rath-yatra",name:A("\u091C\u0917\u0928\u094D\u0928\u093E\u0925 \u0930\u0925 \u092F\u093E\u0924\u094D\u0930\u093E","Jagannath Rath Yatra"),month:3,tithi:2},{id:"guru-purnima",name:A("\u0917\u0941\u0930\u0941 \u092A\u0942\u0930\u094D\u0923\u093F\u092E\u093E","Guru Purnima"),month:3,tithi:15},{id:"hariyali-teej",name:A("\u0939\u0930\u093F\u092F\u093E\u0932\u0940 \u0924\u0940\u091C","Hariyali Teej"),month:4,tithi:3,kind:"vrat"},{id:"nag-panchami",name:A("\u0928\u093E\u0917 \u092A\u0902\u091A\u092E\u0940","Nag Panchami"),month:4,tithi:5},{id:"raksha-bandhan",name:A("\u0930\u0915\u094D\u0937\u093E \u092C\u0902\u0927\u0928","Raksha Bandhan"),month:4,tithi:15},{id:"janmashtami",name:A("\u0915\u0943\u0937\u094D\u0923 \u091C\u0928\u094D\u092E\u093E\u0937\u094D\u091F\u092E\u0940","Krishna Janmashtami"),month:4,tithi:23,at:"night"},{id:"hartalika-teej",name:A("\u0939\u0930\u0924\u093E\u0932\u093F\u0915\u093E \u0924\u0940\u091C","Hartalika Teej"),month:5,tithi:3,kind:"vrat"},{id:"ganesh-chaturthi",name:A("\u0917\u0923\u0947\u0936 \u091A\u0924\u0941\u0930\u094D\u0925\u0940","Ganesh Chaturthi"),month:5,tithi:4,at:"midday"},{id:"anant-chaturdashi",name:A("\u0905\u0928\u0902\u0924 \u091A\u0924\u0941\u0930\u094D\u0926\u0936\u0940","Anant Chaturdashi"),month:5,tithi:14},{id:"pitru-amavasya",name:A("\u0938\u0930\u094D\u0935 \u092A\u093F\u0924\u0943 \u0905\u092E\u093E\u0935\u0938\u094D\u092F\u093E","Sarva Pitru Amavasya"),month:5,tithi:30,at:"afternoon"},{id:"sharad-navratri",name:A("\u0936\u093E\u0930\u0926\u0940\u092F \u0928\u0935\u0930\u093E\u0924\u094D\u0930\u093F","Sharad Navratri"),month:6,tithi:1},{id:"durga-ashtami",name:A("\u0926\u0941\u0930\u094D\u0917\u093E \u0905\u0937\u094D\u091F\u092E\u0940","Durga Ashtami"),month:6,tithi:8},{id:"dussehra",name:A("\u0926\u0936\u0939\u0930\u093E","Dussehra"),month:6,tithi:10,at:"afternoon"},{id:"sharad-purnima",name:A("\u0936\u0930\u0926 \u092A\u0942\u0930\u094D\u0923\u093F\u092E\u093E","Sharad Purnima"),month:6,tithi:15,at:"night"},{id:"karva-chauth",name:A("\u0915\u0930\u0935\u093E \u091A\u094C\u0925","Karva Chauth"),month:6,tithi:19,at:"moonrise",kind:"vrat"},{id:"ahoi-ashtami",name:A("\u0905\u0939\u094B\u0908 \u0905\u0937\u094D\u091F\u092E\u0940","Ahoi Ashtami"),month:6,tithi:23,at:"sunset",kind:"vrat"},{id:"dhanteras",name:A("\u0927\u0928\u0924\u0947\u0930\u0938","Dhanteras"),month:6,tithi:28,at:"sunset"},{id:"narak-chaturdashi",name:A("\u0928\u0930\u0915 \u091A\u0924\u0941\u0930\u094D\u0926\u0936\u0940","Narak Chaturdashi"),month:6,tithi:29},{id:"diwali",name:A("\u0926\u093F\u0935\u093E\u0932\u0940 \xB7 \u0932\u0915\u094D\u0937\u094D\u092E\u0940 \u092A\u0942\u091C\u093E","Diwali \xB7 Lakshmi Puja"),month:6,tithi:30,at:"sunset"},{id:"govardhan",name:A("\u0917\u094B\u0935\u0930\u094D\u0927\u0928 \u092A\u0942\u091C\u093E","Govardhan Puja"),month:7,tithi:1},{id:"bhai-dooj",name:A("\u092D\u093E\u0908 \u0926\u0942\u091C","Bhai Dooj"),month:7,tithi:2},{id:"chhath",name:A("\u091B\u0920 \u092A\u0942\u091C\u093E","Chhath Puja"),month:7,tithi:6},{id:"akshaya-navami",name:A("\u0905\u0915\u094D\u0937\u092F \u0928\u0935\u092E\u0940","Akshaya Navami"),month:7,tithi:9},{id:"tulsi-vivah",name:A("\u0924\u0941\u0932\u0938\u0940 \u0935\u093F\u0935\u093E\u0939","Tulsi Vivah"),month:7,tithi:12},{id:"dev-deepawali",name:A("\u0915\u093E\u0930\u094D\u0924\u093F\u0915 \u092A\u0942\u0930\u094D\u0923\u093F\u092E\u093E \xB7 \u0926\u0947\u0935 \u0926\u0940\u092A\u093E\u0935\u0932\u0940","Kartika Purnima \xB7 Dev Deepawali"),month:7,tithi:15},{id:"vivah-panchami",name:A("\u0935\u093F\u0935\u093E\u0939 \u092A\u0902\u091A\u092E\u0940","Vivah Panchami"),month:8,tithi:5},{id:"gita-jayanti",name:A("\u0917\u0940\u0924\u093E \u091C\u092F\u0902\u0924\u0940","Gita Jayanti"),month:8,tithi:11},{id:"datta-jayanti",name:A("\u0926\u0924\u094D\u0924\u093E\u0924\u094D\u0930\u0947\u092F \u091C\u092F\u0902\u0924\u0940","Dattatreya Jayanti"),month:8,tithi:15},{id:"vasant-panchami",name:A("\u0935\u0938\u0902\u0924 \u092A\u0902\u091A\u092E\u0940","Vasant Panchami"),month:10,tithi:5},{id:"maha-shivaratri",name:A("\u092E\u0939\u093E\u0936\u093F\u0935\u0930\u093E\u0924\u094D\u0930\u093F","Maha Shivaratri"),month:10,tithi:29,at:"night",kind:"vrat"},{id:"holika-dahan",name:A("\u0939\u094B\u0932\u093F\u0915\u093E \u0926\u0939\u0928","Holika Dahan"),month:11,tithi:15,at:"sunset"},{id:"holi",name:A("\u0939\u094B\u0932\u0940","Holi"),month:11,tithi:16}],X1=r1.map(n=>A(`${n.hi} \u0938\u0902\u0915\u094D\u0930\u093E\u0902\u0924\u093F`,`${n.en} Sankranti`));X1[9]=A("\u092E\u0915\u0930 \u0938\u0902\u0915\u094D\u0930\u093E\u0902\u0924\u093F","Makar Sankranti");function xt(n){return Math.floor(f0(n)/12)+1}function c1(n,t,e){let{sunrise:a,sunset:r}=t;switch(n){case"sunset":return r;case"midday":case"purvahna":return new Date(a.getTime()+(r.getTime()-a.getTime())*.5);case"afternoon":return new Date(a.getTime()+(r.getTime()-a.getTime())*.7);case"moonrise":return t.moonrise===void 0&&(t.moonrise=t0("moon",e.lat,e.lon,1,new Date(r.getTime()-36e5),1)),t.moonrise??new Date(r.getTime()+3*36e5);case"night":return new Date(r.getTime()+(a.getTime()+864e5-r.getTime())/2);default:return a}}function Je(n,t){if(n.length===0)return null;let e=Y(168,n[0].sunrise,20),a=Y(180,e,2),r=Y(174,e,2),o=a.getTime()-e.getTime(),s=y=>{let _=m0(G(y.date,1),t).sunrise.getTime(),b=y.sunset.getTime();return{ss:b,ns:_,pradoshEnd:b+(_-b)/5,mid:(b+_)/2}},i=(y,_,b)=>({day:y,window:{start:new Date(_),end:new Date(b)}}),c=n.findIndex(y=>e.getTime()<s(y).ns&&a>y.sunset);if(c<0)return null;let l=n[c],h=s(l),f=y=>{let _=s(y);return e.getTime()<_.pradoshEnd&&a.getTime()>_.ss},M=Math.max(h.ss,r.getTime());if(f(l)&&M<Math.min(h.pradoshEnd,a.getTime()))return i(l,M,h.pradoshEnd);let x=n[c+1];if(x){let y=s(x);if(f(x))return i(x,y.ss,y.pradoshEnd);let _=x.sunrise.getTime()+(x.sunset.getTime()-x.sunrise.getTime())*7/8;if(a.getTime()>=_)return i(x,y.ss,y.pradoshEnd)}if(r.getTime()<=h.mid)return i(l,Math.max(r.getTime(),h.ss),h.mid);let S={start:e.getTime()+o*39/120,end:e.getTime()+o*3/8};return S.end>h.ss&&S.start<h.ns?i(l,Math.max(S.start,h.ss),S.end):i(l,h.ss,h.pradoshEnd)}function Ge(n,t,e){let a=n.findIndex(i=>i.tithi===t||xt(c1("purvahna",i,e))===t);if(a<0)return;let r=n[a],o=n[a+1];if(r.tithi===t||!o||o.tithi!==t)return r;let s=new Date(o.sunrise.getTime()+(o.sunset.getTime()-o.sunrise.getTime())*3/15);return xt(s)===t?o:r}var yt=new Map;function St(n,t){let e=`${t.id}:${n}`,a=yt.get(e);if(a)return a;let r={y:n,m:1,d:1},o=v0(r,{y:n+1,m:1,d:1}),s=(d,g)=>{let v=(g.tithi-d.tithi+30)%30;return{date:d.date,month:d.month.amanta,adhik:d.month.adhik,sunrise:d.sunrise,sunset:d.sunset,tithi:d.tithi,skipped:v===2?d.tithi%30+1:null}},i=[],c=m0(r,t),l=s(m0(G(r,-1),t),c);for(let d=0;d<o;d++){let g=c;c=m0(G(r,d+1),t),i.push(s(g,c))}let h=[],f=(d,g,v,w,P,T,D)=>{h.push({id:`${g}:${D0(d.date)}`,defId:g,date:d.date,kind:v,name:w,major:P,month:d.month,adhik:d.adhik,tithi:T,...D?{window:D}:{}})},M=(d,g)=>d.tithi===g||d.skipped===g,x=(d,g)=>g===1&&d.tithi===30?(d.month+1)%12:d.month;for(let d=0;d<i.length;d++){let g=i[d],v=i[d-1];for(let w of[g.tithi,g.skipped].filter(P=>P!=null)){if(v&&v.tithi===w&&w===g.tithi)continue;let P=x(g,w);if(w===11||w===26){let T=`${g.adhik?12:P}${w===11?"s":"k"}`;f(g,`ekadashi-${T}`,"ekadashi",s1[T],["2s","3s","7s","8s"].includes(T),w)}else if(w===15||w===30){let T=w===30&&!g.adhik?(P+1)%12:P,D=g.adhik?A("\u0905\u0927\u093F\u0915 ","Adhik "):A("",""),L=w===15?A("\u092A\u0942\u0930\u094D\u0923\u093F\u092E\u093E","Purnima"):A("\u0905\u092E\u093E\u0935\u0938\u094D\u092F\u093E","Amavasya"),H=w===15?"purnima":"amavasya";f(g,`${H}-${P}`,H,A(`${D.hi}${gt[T].hi} ${L.hi}`,`${D.en}${gt[T].en} ${L.en}`),!1,w)}}}let S=(d,g,v)=>{let w=D=>D===d||D===(d+28)%30+1,P=D=>w(D.tithi)&&xt(c1(g,D,t))===d,T=[];for(let D=0;D<i.length;D++)P(i[D])&&(T.length===0||D-T[T.length-1]>3)&&!(D===0&&P(l))&&T.push(D);for(let D=0;D<i.length;D++){let L=i[D],H=D===0?l:i[D-1];!M(L,d)||H.tithi===d&&L.tithi===d||T.some(K=>Math.abs(K-D)<=1)||D===0&&P(l)||T.push(D)}T.sort((D,L)=>D-L).forEach(D=>v(i[D]))};for(let d of[13,28])S(d,"sunset",g=>{let v=new Date(Date.UTC(g.date.y,g.date.m-1,g.date.d)).getUTCDay(),w=v===1?A("\u0938\u094B\u092E ","Som "):v===6?A("\u0936\u0928\u093F ","Shani "):v===2?A("\u092D\u094C\u092E ","Bhaum "):A("","");f(g,`pradosh-${d}`,"pradosh",A(`${w.hi}\u092A\u094D\u0930\u0926\u094B\u0937 \u0935\u094D\u0930\u0924`,`${w.en}Pradosh Vrat`),!1,d)});S(19,"moonrise",d=>{d.month!==6&&f(d,"sankashti","sankashti",A("\u0938\u0902\u0915\u0937\u094D\u091F\u0940 \u091A\u0924\u0941\u0930\u094D\u0925\u0940","Sankashti Chaturthi"),!1,19)}),S(29,"night",d=>{d.month!==10&&f(d,"masik-shivaratri","shivaratri",A("\u092E\u093E\u0938\u093F\u0915 \u0936\u093F\u0935\u0930\u093E\u0924\u094D\u0930\u093F","Masik Shivaratri"),!1,29)});for(let d of qe){let g=d.at??"sunrise",v=0;for(;v<i.length;){if(i[v].adhik||x(i[v],d.tithi)!==d.month){v++;continue}let w=[];for(;v<i.length&&!i[v].adhik&&x(i[v],d.tithi)===d.month;)w.push(i[v++]);if(d.id==="holika-dahan"||d.id==="holi"){let D=Je(w,t);if(!D)continue;if(d.id==="holika-dahan")f(D.day,d.id,d.kind??"festival",d.name,!0,d.tithi,D.window);else{let L=i.findIndex(H=>v0(D.day.date,H.date)===1);L>=0&&f(i[L],d.id,d.kind??"festival",d.name,!0,d.tithi)}continue}let T=(g==="sunrise"?void 0:g==="purvahna"?Ge(w,d.tithi,t):w.find(D=>xt(c1(g,D,t))===d.tithi))??w.find(D=>M(D,d.tithi));T&&f(T,d.id,d.kind??"festival",d.name,!0,d.tithi)}}let y=new Date(i[0].sunrise.getTime()-864e5);for(let d=0;d<13;d++){let g=Math.floor(d0(y)/30),v=K1((g+1)%12,y),w=G0(v,t),P=(g+1)%12,T={y:w.y,m:w.m,d:w.d};if(P===9&&v>m0(T,t).sunset&&(T=G(T,1)),T.y===n&&h.push({id:`sankranti-${P}:${D0(T)}`,defId:`sankranti-${P}`,date:T,kind:"sankranti",name:X1[P],major:P===9,month:-1,adhik:!1,tithi:0}),y=new Date(v.getTime()+864e5),w.y>n)break}let _=new Set(h.filter(d=>d.major&&(d.tithi===15||d.tithi===30)).map(d=>`${D0(d.date)}:${d.tithi}`)),b=h.filter(d=>!((d.kind==="purnima"||d.kind==="amavasya")&&_.has(`${D0(d.date)}:${d.tithi}`)));return h.length=0,h.push(...b),h.sort((d,g)=>v0(g.date,d.date)||Number(g.major)-Number(d.major)),yt.size>12&&yt.clear(),yt.set(e,h),h}function Z1(n,t,e={}){let a=e.days??60,r=G(n,a);return[...St(n.y,t),...r.y!==n.y?St(r.y,t):[]].filter(s=>{let i=v0(n,s.date);return i>=0&&i<=a&&(!e.majorOnly||s.major||s.kind==="ekadashi"||s.kind==="purnima"||s.kind==="amavasya")})}var k=(n,t,e,a,r,o,s)=>({id:n,hi:t,en:e,state:{hi:a,en:r},lat:o,lon:s,tz:"Asia/Kolkata",offset:330}),wt=[k("mumbai","\u092E\u0941\u0902\u092C\u0908","Mumbai","\u092E\u0939\u093E\u0930\u093E\u0937\u094D\u091F\u094D\u0930","Maharashtra",19.076,72.8777),k("delhi","\u0926\u093F\u0932\u094D\u0932\u0940","Delhi","\u0926\u093F\u0932\u094D\u0932\u0940","Delhi",28.6139,77.209),k("varanasi","\u0935\u093E\u0930\u093E\u0923\u0938\u0940","Varanasi","\u0909\u0924\u094D\u0924\u0930 \u092A\u094D\u0930\u0926\u0947\u0936","Uttar Pradesh",25.3176,82.9739),k("ujjain","\u0909\u091C\u094D\u091C\u0948\u0928","Ujjain","\u092E\u0927\u094D\u092F \u092A\u094D\u0930\u0926\u0947\u0936","Madhya Pradesh",23.1765,75.7885),k("jaipur","\u091C\u092F\u092A\u0941\u0930","Jaipur","\u0930\u093E\u091C\u0938\u094D\u0925\u093E\u0928","Rajasthan",26.9124,75.7873),k("lucknow","\u0932\u0916\u0928\u090A","Lucknow","\u0909\u0924\u094D\u0924\u0930 \u092A\u094D\u0930\u0926\u0947\u0936","Uttar Pradesh",26.8467,80.9462),k("kanpur","\u0915\u093E\u0928\u092A\u0941\u0930","Kanpur","\u0909\u0924\u094D\u0924\u0930 \u092A\u094D\u0930\u0926\u0947\u0936","Uttar Pradesh",26.4499,80.3319),k("prayagraj","\u092A\u094D\u0930\u092F\u093E\u0917\u0930\u093E\u091C","Prayagraj","\u0909\u0924\u094D\u0924\u0930 \u092A\u094D\u0930\u0926\u0947\u0936","Uttar Pradesh",25.4358,81.8463),k("ayodhya","\u0905\u092F\u094B\u0927\u094D\u092F\u093E","Ayodhya","\u0909\u0924\u094D\u0924\u0930 \u092A\u094D\u0930\u0926\u0947\u0936","Uttar Pradesh",26.7922,82.1998),k("mathura","\u092E\u0925\u0941\u0930\u093E","Mathura","\u0909\u0924\u094D\u0924\u0930 \u092A\u094D\u0930\u0926\u0947\u0936","Uttar Pradesh",27.4924,77.6737),k("haridwar","\u0939\u0930\u093F\u0926\u094D\u0935\u093E\u0930","Haridwar","\u0909\u0924\u094D\u0924\u0930\u093E\u0916\u0902\u0921","Uttarakhand",29.9457,78.1642),k("dehradun","\u0926\u0947\u0939\u0930\u093E\u0926\u0942\u0928","Dehradun","\u0909\u0924\u094D\u0924\u0930\u093E\u0916\u0902\u0921","Uttarakhand",30.3165,78.0322),k("chandigarh","\u091A\u0902\u0921\u0940\u0917\u0922\u093C","Chandigarh","\u091A\u0902\u0921\u0940\u0917\u0922\u093C","Chandigarh",30.7333,76.7794),k("amritsar","\u0905\u092E\u0943\u0924\u0938\u0930","Amritsar","\u092A\u0902\u091C\u093E\u092C","Punjab",31.634,74.8723),k("bhopal","\u092D\u094B\u092A\u093E\u0932","Bhopal","\u092E\u0927\u094D\u092F \u092A\u094D\u0930\u0926\u0947\u0936","Madhya Pradesh",23.2599,77.4126),k("indore","\u0907\u0902\u0926\u094C\u0930","Indore","\u092E\u0927\u094D\u092F \u092A\u094D\u0930\u0926\u0947\u0936","Madhya Pradesh",22.7196,75.8577),k("patna","\u092A\u091F\u0928\u093E","Patna","\u092C\u093F\u0939\u093E\u0930","Bihar",25.5941,85.1376),k("ranchi","\u0930\u093E\u0902\u091A\u0940","Ranchi","\u091D\u093E\u0930\u0916\u0902\u0921","Jharkhand",23.3441,85.3096),k("raipur","\u0930\u093E\u092F\u092A\u0941\u0930","Raipur","\u091B\u0924\u094D\u0924\u0940\u0938\u0917\u0922\u093C","Chhattisgarh",21.2514,81.6296),k("ahmedabad","\u0905\u0939\u092E\u0926\u093E\u092C\u093E\u0926","Ahmedabad","\u0917\u0941\u091C\u0930\u093E\u0924","Gujarat",23.0225,72.5714),k("surat","\u0938\u0942\u0930\u0924","Surat","\u0917\u0941\u091C\u0930\u093E\u0924","Gujarat",21.1702,72.8311),k("vadodara","\u0935\u0921\u094B\u0926\u0930\u093E","Vadodara","\u0917\u0941\u091C\u0930\u093E\u0924","Gujarat",22.3072,73.1812),k("pune","\u092A\u0941\u0923\u0947","Pune","\u092E\u0939\u093E\u0930\u093E\u0937\u094D\u091F\u094D\u0930","Maharashtra",18.5204,73.8567),k("nagpur","\u0928\u093E\u0917\u092A\u0941\u0930","Nagpur","\u092E\u0939\u093E\u0930\u093E\u0937\u094D\u091F\u094D\u0930","Maharashtra",21.1458,79.0882),k("nashik","\u0928\u093E\u0938\u093F\u0915","Nashik","\u092E\u0939\u093E\u0930\u093E\u0937\u094D\u091F\u094D\u0930","Maharashtra",19.9975,73.7898),k("kolkata","\u0915\u094B\u0932\u0915\u093E\u0924\u093E","Kolkata","\u092A\u0936\u094D\u091A\u093F\u092E \u092C\u0902\u0917\u093E\u0932","West Bengal",22.5726,88.3639),k("bhubaneswar","\u092D\u0941\u0935\u0928\u0947\u0936\u094D\u0935\u0930","Bhubaneswar","\u0913\u0921\u093F\u0936\u093E","Odisha",20.2961,85.8245),k("puri","\u092A\u0941\u0930\u0940","Puri","\u0913\u0921\u093F\u0936\u093E","Odisha",19.8135,85.8312),k("guwahati","\u0917\u0941\u0935\u093E\u0939\u093E\u091F\u0940","Guwahati","\u0905\u0938\u092E","Assam",26.1445,91.7362),k("hyderabad","\u0939\u0948\u0926\u0930\u093E\u092C\u093E\u0926","Hyderabad","\u0924\u0947\u0932\u0902\u0917\u093E\u0928\u093E","Telangana",17.385,78.4867),k("bengaluru","\u092C\u0947\u0902\u0917\u0932\u0941\u0930\u0941","Bengaluru","\u0915\u0930\u094D\u0928\u093E\u091F\u0915","Karnataka",12.9716,77.5946),k("chennai","\u091A\u0947\u0928\u094D\u0928\u0908","Chennai","\u0924\u092E\u093F\u0932\u0928\u093E\u0921\u0941","Tamil Nadu",13.0827,80.2707),k("madurai","\u092E\u0926\u0941\u0930\u0948","Madurai","\u0924\u092E\u093F\u0932\u0928\u093E\u0921\u0941","Tamil Nadu",9.9252,78.1198),k("tirupati","\u0924\u093F\u0930\u0941\u092A\u0924\u093F","Tirupati","\u0906\u0902\u0927\u094D\u0930 \u092A\u094D\u0930\u0926\u0947\u0936","Andhra Pradesh",13.6288,79.4192),k("visakhapatnam","\u0935\u093F\u0936\u093E\u0916\u093E\u092A\u0924\u094D\u0924\u0928\u092E","Visakhapatnam","\u0906\u0902\u0927\u094D\u0930 \u092A\u094D\u0930\u0926\u0947\u0936","Andhra Pradesh",17.6868,83.2185),k("kochi","\u0915\u094B\u091A\u094D\u091A\u093F","Kochi","\u0915\u0947\u0930\u0932","Kerala",9.9312,76.2673),k("thiruvananthapuram","\u0924\u093F\u0930\u0941\u0935\u0928\u0902\u0924\u092A\u0941\u0930\u092E","Thiruvananthapuram","\u0915\u0947\u0930\u0932","Kerala",8.5241,76.9366),k("goa","\u092A\u0923\u091C\u0940","Panaji","\u0917\u094B\u0935\u093E","Goa",15.4909,73.8278),k("jammu","\u091C\u092E\u094D\u092E\u0942","Jammu","\u091C\u092E\u094D\u092E\u0942 \u0914\u0930 \u0915\u0936\u094D\u092E\u0940\u0930","Jammu & Kashmir",32.7266,74.857),k("srinagar","\u0936\u094D\u0930\u0940\u0928\u0917\u0930","Srinagar","\u091C\u092E\u094D\u092E\u0942 \u0914\u0930 \u0915\u0936\u094D\u092E\u0940\u0930","Jammu & Kashmir",34.0837,74.7973),k("shimla","\u0936\u093F\u092E\u0932\u093E","Shimla","\u0939\u093F\u092E\u093E\u091A\u0932 \u092A\u094D\u0930\u0926\u0947\u0936","Himachal Pradesh",31.1048,77.1734),k("dwarka","\u0926\u094D\u0935\u093E\u0930\u0915\u093E","Dwarka","\u0917\u0941\u091C\u0930\u093E\u0924","Gujarat",22.2394,68.9678),{id:"kathmandu",hi:"\u0915\u093E\u0920\u092E\u093E\u0902\u0921\u0942",en:"Kathmandu",state:{hi:"\u0928\u0947\u092A\u093E\u0932",en:"Nepal"},lat:27.7172,lon:85.324,tz:"Asia/Kathmandu",offset:345},{id:"dubai",hi:"\u0926\u0941\u092C\u0908",en:"Dubai",state:{hi:"\u0938\u0902\u092F\u0941\u0915\u094D\u0924 \u0905\u0930\u092C \u0905\u092E\u0940\u0930\u093E\u0924",en:"UAE"},lat:25.2048,lon:55.2708,tz:"Asia/Dubai",offset:240},{id:"singapore",hi:"\u0938\u093F\u0902\u0917\u093E\u092A\u0941\u0930",en:"Singapore",state:{hi:"\u0938\u093F\u0902\u0917\u093E\u092A\u0941\u0930",en:"Singapore"},lat:1.3521,lon:103.8198,tz:"Asia/Singapore",offset:480},{id:"london",hi:"\u0932\u0902\u0926\u0928",en:"London",state:{hi:"\u092C\u094D\u0930\u093F\u091F\u0947\u0928",en:"UK"},lat:51.5074,lon:-.1278,tz:"Europe/London",offset:0},{id:"newyork",hi:"\u0928\u094D\u092F\u0942\u092F\u0949\u0930\u094D\u0915",en:"New York",state:{hi:"\u0905\u092E\u0947\u0930\u093F\u0915\u093E",en:"USA"},lat:40.7128,lon:-74.006,tz:"America/New_York",offset:-300},{id:"sanfrancisco",hi:"\u0938\u0948\u0928 \u092B\u093C\u094D\u0930\u093E\u0902\u0938\u093F\u0938\u094D\u0915\u094B",en:"San Francisco",state:{hi:"\u0905\u092E\u0947\u0930\u093F\u0915\u093E",en:"USA"},lat:37.7749,lon:-122.4194,tz:"America/Los_Angeles",offset:-480},{id:"toronto",hi:"\u091F\u094B\u0930\u0902\u091F\u094B",en:"Toronto",state:{hi:"\u0915\u0928\u093E\u0921\u093E",en:"Canada"},lat:43.6532,lon:-79.3832,tz:"America/Toronto",offset:-300},{id:"sydney",hi:"\u0938\u093F\u0921\u0928\u0940",en:"Sydney",state:{hi:"\u0911\u0938\u094D\u091F\u094D\u0930\u0947\u0932\u093F\u092F\u093E",en:"Australia"},lat:-33.8688,lon:151.2093,tz:"Australia/Sydney",offset:600}];function tn(n){return wt.find(t=>t.id===n)??wt[0]}function u1(n){return[{kind:"rahu",...n.rahuKaal},{kind:"yama",...n.yamaganda},{kind:"gulika",...n.gulika}].sort((t,e)=>t.start.getTime()-e.start.getTime())}var nn=(n,t)=>t>=n.start&&t<n.end;function en(n,t){let e=n.choghadiya;t<n.sunrise&&(e=B0(G(n.date,-1),n.city).choghadiya);let a=e.findIndex(h=>nn(h,t)),r=a>=0?e[a]:null,o=a>=0&&a+1<e.length?e[a+1]:null,s=u1(n),i=s.find(h=>nn(h,t))??null,c=s.filter(h=>h.start>t),l=i?"avoid":r?o1[r.kind].quality:"neutral";return{slot:r,nextSlot:o,active:i,next:c[0]??null,later:c[1]??null,tone:l}}return hn(Ye);})();
+/*! Bundled license information:
+
+astronomy-engine/esm/astronomy.js:
+  (**
+      @preserve
+  
+      Astronomy library for JavaScript (browser and Node.js).
+      https://github.com/cosinekitty/astronomy
+  
+      MIT License
+  
+      Copyright (c) 2019-2023 Don Cross <cosinekitty@gmail.com>
+  
+      Permission is hereby granted, free of charge, to any person obtaining a copy
+      of this software and associated documentation files (the "Software"), to deal
+      in the Software without restriction, including without limitation the rights
+      to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+      copies of the Software, and to permit persons to whom the Software is
+      furnished to do so, subject to the following conditions:
+  
+      The above copyright notice and this permission notice shall be included in all
+      copies or substantial portions of the Software.
+  
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+      IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+      FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+      AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+      LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.
+  *)
+  (**
+   * @fileoverview Astronomy calculation library for browser scripting and Node.js.
+   * @author Don Cross <cosinekitty@gmail.com>
+   * @license MIT
+   *)
+*/
+
+</script>
+<script>
+(() => {
+  // ---- placeholders: fill these in before launch ----
+  const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.panchang.hinducalendar';
+  const GITA_APP_URL = 'https://dailygita.github.io/';
+  const CONTACT_EMAIL = 'sud_kan2004@yahoo.com';
+
+  const P = window.Panchang;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+  document.querySelectorAll('.play-link').forEach((a) => { a.href = PLAY_STORE_URL; });
+  document.getElementById('gita-link').href = GITA_APP_URL;
+  document.getElementById('mail').textContent = CONTACT_EMAIL;
+
+  // ---------- copy ----------
+  const T = {
+    en: {
+      brand: 'Panchang', brandOther: 'The Hindu Calendar', install: 'Install',
+      h1: 'Every day, an auspicious day.', h1Other: 'हर दिन, शुभ दिन',
+      lead: 'Tithi, nakshatra, Rahu Kaal and every vrat, worked out for your city each morning, right on your phone.',
+      playT1: 'Get it on', soon: 'iPhone app coming soon', fine: 'Free · No ads · No sign-up',
+      liveLabel: "Today's panchang for", sunrise: 'Sunrise', sunset: 'Sunset', rahu: 'Rahu Kaal', yama: 'Yamaganda', gulika: 'Gulika', goodChog: 'Good choghadiya',
+      liveNote: 'Calculated in your browser, the same way the app does it on your phone.',
+      monthNak: '{month} month · {nak} nakshatra',
+      vGood: 'A good time now', vAvoid: '{name} is on now', vNeutral: 'An ordinary time now', vNight: 'Night',
+      vChog: '{chog} choghadiya until {time}', vUntil: 'Avoid starting new work until {time}',
+      vNext: 'Next: {name} {range}', vDone: "Today's Rahu Kaal, Yamaganda and Gulika are over",
+      qKicker: 'Before you begin', qTitle: 'Is this a good time to start?',
+      qBody: "It's the question a panchang exists to answer. Panchang answers it the moment you open it: which choghadiya is running, and whether it's Rahu Kaal, Yamaganda or Gulika, for the city you live in.",
+      rulerTitle: 'Good and bad times today', now: 'Now',
+      brahma: 'Brahma Muhurat', abhijit: 'Abhijit Muhurat', tagGood: 'Auspicious', tagAvoid: 'Avoid',
+      m1Kicker: 'Every morning', m1Title: 'The whole day, at a glance',
+      m1Body: 'Tithi, nakshatra and month at the top. Sunrise, sunset and Brahma Muhurat below. One look before you leave the house is enough.',
+      m1Detail: "Rahu Kaal, Yamaganda and Gulika are worked out from your city's own sunrise, never from a fixed table.",
+      m2Kicker: 'Vrat and parana', m2Title: 'Keep every vrat, and break it on time',
+      m2Body: 'A reminder the evening before each Ekadashi, and the exact parana window the next morning, so the fast is kept the way it should be.',
+      m2Detail: 'Purnima, Amavasya, Pradosh, Sankashti and the year’s festivals too, with what to do and what to avoid on each.',
+      m3Kicker: 'Your language', m3Title: 'In your language, even without internet',
+      m3Body: 'Everything is calculated on the phone itself, so it works in the temple, on the train, anywhere. Large text for easy reading, and a night theme for the evening aarti.',
+      gKicker: 'Also inside', gTitle: 'A calendar for the month, and a muhurat finder',
+      g1Title: 'Every tithi of the month', g1Body: 'Each day shows its tithi. Vrats, Purnima and Amavasya are marked, and any date opens its full panchang.',
+      g2Title: 'Shubh muhurat, by occasion', g2Body: 'Good dates for a wedding, griha pravesh, a new vehicle or property, naming and mundan, with the reason for each.',
+      tr1: 'Free', tr2: 'No ads', tr3: 'No sign-up', tr4: 'Works offline', tr5: 'Calculated on your phone', tr6: '8 languages',
+      fKicker: 'Coming up', fTitle: 'The next vrats and festivals in {city}', fSub: 'Dates calculated for your city, the way the app shows them.',
+      today: 'Today', tomorrow: 'Tomorrow', inDays: 'in {n} days',
+      cTitle: 'Light the lamp. Begin the day.', cBody: 'Panchang is free on Android. The iPhone app is coming soon.',
+      privacy: 'Privacy policy', gita: 'Also from us: Bhagavad Gita Quotes Daily', contact: 'Contact',
+      altToday: 'The Today screen: tithi, nakshatra, a moon, and a card saying whether now is a good time',
+      altFestival: 'An Ekadashi page showing when the fast begins and the parana window to break it',
+      altLanguages: 'Settings with all eight languages to choose from',
+      altCalendar: "The month calendar with each day's tithi and vrats marked",
+      altMuhurat: 'The muhurat finder listing good dates for a wedding',
+      playLabel: 'Get it on Google Play', cityLabel: 'City', installLabel: 'Install Panchang - The Hindu Calendar from Google Play',
+    },
+    hi: {
+      brand: 'पंचांग', brandOther: 'हिंदू कैलेंडर', install: 'डाउनलोड',
+      h1: 'हर दिन, शुभ दिन', h1Other: 'Every day, an auspicious day.',
+      lead: 'तिथि, नक्षत्र, राहु काल और हर व्रत, आपके शहर के हिसाब से, रोज़ सुबह आपके फ़ोन पर।',
+      playT1: 'इसे पाएं', soon: 'iPhone ऐप जल्द आ रहा है', fine: 'मुफ़्त · कोई विज्ञापन नहीं · कोई साइन-अप नहीं',
+      liveLabel: 'आज का पंचांग', sunrise: 'सूर्योदय', sunset: 'सूर्यास्त', rahu: 'राहु काल', yama: 'यमगंड', gulika: 'गुलिक', goodChog: 'शुभ चौघड़िया',
+      liveNote: 'आपके ब्राउज़र में गणना की गई, ठीक वैसे ही जैसे ऐप आपके फ़ोन पर करता है।',
+      monthNak: '{month} मास · {nak} नक्षत्र',
+      vGood: 'अभी शुभ समय है', vAvoid: 'अभी {name} चल रहा है', vNeutral: 'अभी सामान्य समय है', vNight: 'रात',
+      vChog: '{chog} चौघड़िया · {time} तक', vUntil: '{time} तक नया काम शुरू न करें',
+      vNext: 'अगला: {name} {range}', vDone: 'आज के राहु काल, यमगंड और गुलिक बीत चुके हैं',
+      qKicker: 'शुरू करने से पहले', qTitle: 'क्या अभी शुभ समय है?',
+      qBody: 'पंचांग इसी सवाल का जवाब देने के लिए है। पंचांग खोलते ही बता देता है: अभी कौन-सा चौघड़िया चल रहा है, और राहु काल, यमगंड या गुलिक तो नहीं, ठीक आपके शहर के लिए।',
+      rulerTitle: 'आज के शुभ और अशुभ समय', now: 'अभी',
+      brahma: 'ब्रह्म मुहूर्त', abhijit: 'अभिजीत मुहूर्त', tagGood: 'शुभ', tagAvoid: 'अशुभ',
+      m1Kicker: 'हर सुबह', m1Title: 'एक नज़र में पूरा दिन',
+      m1Body: 'सबसे ऊपर तिथि, नक्षत्र और मास। नीचे सूर्योदय, सूर्यास्त और ब्रह्म मुहूर्त। घर से निकलने से पहले एक नज़र काफ़ी है।',
+      m1Detail: 'राहु काल, यमगंड और गुलिक आपके शहर के अपने सूर्योदय से निकाले जाते हैं, किसी तय तालिका से नहीं।',
+      m2Kicker: 'व्रत और पारण', m2Title: 'हर व्रत रखें, सही समय पर खोलें',
+      m2Body: 'हर एकादशी से एक शाम पहले याद दिलाना, और अगली सुबह पारण का ठीक समय, ताकि व्रत विधि से पूरा हो।',
+      m2Detail: 'पूर्णिमा, अमावस्या, प्रदोष, संकष्टी और साल भर के त्योहार भी, हर एक पर क्या करें और क्या न करें के साथ।',
+      m3Kicker: 'आपकी भाषा', m3Title: 'आपकी भाषा में, बिना इंटरनेट के',
+      m3Body: 'सारी गणना फ़ोन पर ही होती है, इसलिए मंदिर में, सफ़र में, कहीं भी चलता है। आसानी से पढ़ने के लिए बड़े अक्षर, और शाम की आरती के लिए रात वाली थीम।',
+      gKicker: 'और भी', gTitle: 'महीने का कैलेंडर और मुहूर्त खोजक',
+      g1Title: 'महीने की हर तिथि', g1Body: 'हर दिन की तिथि लिखी है। व्रत, पूर्णिमा और अमावस्या पर निशान है, और किसी भी तारीख़ का पूरा पंचांग खुल जाता है।',
+      g2Title: 'हर काम का शुभ मुहूर्त', g2Body: 'विवाह, गृह प्रवेश, नया वाहन या संपत्ति, नामकरण और मुंडन के लिए शुभ दिन, हर एक के कारण के साथ।',
+      tr1: 'मुफ़्त', tr2: 'कोई विज्ञापन नहीं', tr3: 'कोई साइन-अप नहीं', tr4: 'बिना इंटरनेट', tr5: 'गणना आपके फ़ोन पर', tr6: '8 भाषाएँ',
+      fKicker: 'आगे आ रहे हैं', fTitle: '{city} में आने वाले व्रत और त्योहार', fSub: 'तारीख़ें आपके शहर के हिसाब से, जैसे ऐप में दिखती हैं।',
+      today: 'आज', tomorrow: 'कल', inDays: '{n} दिन बाद',
+      cTitle: 'दीप जलाइए, दिन शुरू कीजिए।', cBody: 'पंचांग Android पर मुफ़्त है। iPhone ऐप जल्द आ रहा है।',
+      privacy: 'गोपनीयता नीति', gita: 'हमारा दूसरा ऐप: Bhagavad Gita Quotes Daily', contact: 'संपर्क',
+      altToday: 'आज की स्क्रीन: तिथि, नक्षत्र, चंद्रमा और यह कि अभी शुभ समय है या नहीं',
+      altFestival: 'एकादशी का पेज: व्रत कब शुरू करें और पारण कब करें',
+      altLanguages: 'सेटिंग्स में आठों भाषाओं का चुनाव',
+      altCalendar: 'महीने का कैलेंडर, हर दिन की तिथि और व्रत के निशान के साथ',
+      altMuhurat: 'मुहूर्त खोजक में विवाह के शुभ दिन',
+      playLabel: 'इसे Google Play पर पाएं', cityLabel: 'शहर', installLabel: 'पंचांग - हिंदू कैलेंडर Google Play से डाउनलोड करें',
+    },
+  };
+  const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => (v[k] ?? ''));
+
+  // ---------- language ----------
+  const params = new URLSearchParams(location.search);
+  let lang = store.get('dp.lang') || (navigator.language || '').toLowerCase().startsWith('hi') ? 'hi' : 'en';
+  lang = store.get('dp.lang') || lang;
+  if (params.get('lang') === 'hi' || params.get('lang') === 'en') lang = params.get('lang');
+
+  function applyLang() {
+    const t = T[lang];
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i]').forEach((el) => { const v = t[el.dataset.i]; if (v != null) el.textContent = v; });
+    document.querySelectorAll('[data-i-alt]').forEach((el) => { el.alt = t[el.dataset.iAlt]; el.src = el.dataset['src' + (lang === 'hi' ? 'Hi' : 'En')]; });
+    document.querySelectorAll('.play').forEach((a) => a.setAttribute('aria-label', t.playLabel));
+    document.querySelector('.btn-install').setAttribute('aria-label', t.installLabel);
+    document.querySelector('.sub-title').lang = lang === 'hi' ? 'en' : 'hi';
+    document.getElementById('city').setAttribute('aria-label', t.cityLabel);
+    document.querySelectorAll('.lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+    renderLive();
+  }
+  document.querySelectorAll('.lang button').forEach((b) => b.addEventListener('click', () => { lang = b.dataset.lang; store.set('dp.lang', lang); applyLang(); }));
+
+  // ---------- moon (the app's 3D moon, as a string) ----------
+  let mid = 0;
+  function moonSVG(k, waxing, size, glow) {
+    const id = 'm' + (mid++);
+    const R = size * (glow ? 0.36 : 0.44), c = size / 2;
+    k = Math.min(1, Math.max(0, k));
+    const rx = Math.abs(1 - 2 * k) * R, sweep = k > 0.5 ? 1 : 0;
+    const lit = `M${c} ${c - R} A${R} ${R} 0 0 1 ${c} ${c + R} A${rx} ${R} 0 0 ${sweep} ${c} ${c - R} Z`;
+    const mirror = waxing ? '' : ` transform="translate(${size} 0) scale(-1 1)"`;
+    const maria = [[-0.32, -0.28, 0.2], [0.18, -0.4, 0.13], [0.3, 0.12, 0.24], [-0.1, 0.38, 0.15], [-0.48, 0.18, 0.1], [0.05, -0.05, 0.09]]
+      .map(([x, y, r]) => `<circle cx="${c + x * R}" cy="${c + y * R}" r="${r * R * 1.4}" fill="url(#${id}m)"/>`).join('');
+    return `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" aria-hidden="true"><defs>
+      <radialGradient id="${id}h"><stop offset=".5" stop-color="#F4CF7A" stop-opacity=".38"/><stop offset="1" stop-color="#F4CF7A" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${id}d" cx="38%" cy="35%" r="70%"><stop offset="0" stop-color="#4A3530"/><stop offset="1" stop-color="#120605"/></radialGradient>
+      <radialGradient id="${id}f" cx="36%" cy="32%" r="78%"><stop offset="0" stop-color="#FFF9E6"/><stop offset=".45" stop-color="#F7DA8E"/><stop offset="1" stop-color="#C38E35"/></radialGradient>
+      <radialGradient id="${id}l"><stop offset=".7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></radialGradient>
+      <radialGradient id="${id}m"><stop offset="0" stop-color="#9C6B26" stop-opacity=".32"/><stop offset=".7" stop-color="#9C6B26" stop-opacity=".12"/><stop offset="1" stop-color="#9C6B26" stop-opacity="0"/></radialGradient>
+      <clipPath id="${id}c">${k > 0.99 ? `<circle cx="${c}" cy="${c}" r="${R}"/>` : `<path d="${lit}"${mirror}/>`}</clipPath></defs>
+      ${glow && k > 0.05 ? `<circle cx="${c}" cy="${c}" r="${c}" fill="url(#${id}h)" opacity="${0.4 + k * 0.6}"/>` : ''}
+      <circle cx="${c}" cy="${c}" r="${R}" fill="url(#${id}d)"/>
+      ${k > 0.01 ? `<g clip-path="url(#${id}c)"><circle cx="${c}" cy="${c}" r="${R}" fill="url(#${id}f)"/>${maria}</g>` : ''}
+      <circle cx="${c}" cy="${c}" r="${R}" fill="url(#${id}l)"/>
+      <circle cx="${c}" cy="${c}" r="${R - 0.5}" fill="none" stroke="#FFE7A8" stroke-opacity=".35"/></svg>`;
+  }
+
+  // ---------- city ----------
+  const POPULAR = ['delhi', 'mumbai', 'bengaluru', 'chennai', 'hyderabad', 'kolkata', 'pune', 'ahmedabad', 'jaipur', 'lucknow', 'varanasi', 'ujjain'];
+  const sel = document.getElementById('city');
+  let city = null;
+  function pickDefaultCity() {
+    const saved = store.get('dp.city');
+    if (saved && P && P.CITIES.some((c) => c.id === saved)) return saved;
+    let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch {}
+    const abroad = P && P.CITIES.find((c) => c.tz === tz && c.tz !== 'Asia/Kolkata');
+    return abroad ? abroad.id : 'delhi';
+  }
+  function fillCities() {
+    const popular = POPULAR.map((id) => P.getCity(id));
+    const rest = P.CITIES.filter((c) => !POPULAR.includes(c.id)).sort((a, b) => a.en.localeCompare(b.en));
+    const html = [...popular, ...rest].map((c) => `<option value="${c.id}">${lang === 'hi' ? c.hi : c.en}</option>`).join('');
+    if (sel.dataset.lang !== lang) { sel.innerHTML = html; sel.dataset.lang = lang; }
+    sel.value = city.id;
+  }
+  sel.addEventListener('change', () => { city = P.getCity(sel.value); store.set('dp.city', city.id); renderLive(); });
+
+  // ---------- formatting (as the app does it) ----------
+  const nm = (n) => n[lang];
+  function part(h) { const H = h; return lang === 'hi' ? (H >= 4 && H < 12 ? 'सुबह' : H >= 12 && H < 16 ? 'दोपहर' : H >= 16 && H < 19.5 ? 'शाम' : 'रात') : ''; }
+  function clock(d, withPart = true) {
+    const p = P.localParts(d, city); const h12 = p.h % 12 === 0 ? 12 : p.h % 12; const mm = String(p.min).padStart(2, '0');
+    if (lang === 'hi') return withPart ? `${part(p.h + p.min / 60)} ${h12}:${mm}` : `${h12}:${mm}`;
+    return withPart ? `${h12}:${mm} ${p.h < 12 ? 'AM' : 'PM'}` : `${h12}:${mm}`;
+  }
+  function range(r) {
+    const a = P.localParts(r.start, city), b = P.localParts(r.end, city);
+    if (lang === 'hi') return `${clock(r.start)} – ${clock(r.end, part(a.h + a.min / 60) !== part(b.h + b.min / 60))}`;
+    return `${clock(r.start, (a.h < 12) !== (b.h < 12))} – ${clock(r.end)}`;
+  }
+  const tithiLabel = (t) => (t === 15 || t === 30 ? nm(P.names.tithiName(t)) : `${nm(t <= 15 ? P.names.PAKSHA.shukla : P.names.PAKSHA.krishna)} ${nm(P.names.tithiName(t))}`);
+  const dateLong = (d) => `${nm(P.names.WEEKDAY[P.weekday(d)])}, ${d.d} ${nm(P.names.GREG_MONTH[d.m - 1])}`;
+  const AVOID = { rahu: 'rahu', yama: 'yama', gulika: 'gulika' };
+
+  // ---------- the live parts ----------
+  const setText = (id, v) => { const el = document.getElementById(id); if (el.textContent !== v) el.textContent = v; };
+  function renderLive() {
+    if (!P || !city) return;
+    const t = T[lang];
+    try {
+      fillCities();
+      const now = new Date();
+      const today = P.todayIn(city, now);
+      const p = P.computeDay(today, city);
+      const nak = p.nakshatras.find((s) => now >= s.start && now < s.end) || p.nakshatras[0];
+      const month = nm(P.names.LUNAR_MONTH[p.month.purnimanta]);
+      document.getElementById('live-moon').innerHTML = moonSVG(p.illumination, p.elongation < 180, 120, true);
+      setText('live-date', dateLong(today));
+      setText('live-tithi', tithiLabel(p.tithi));
+      setText('live-nak', fill(t.monthNak, { month: (p.month.adhik ? (lang === 'hi' ? 'अधिक ' : 'Adhik ') : '') + month, nak: nm(P.names.NAKSHATRA[nak.value]) }));
+      setText('t-rise', clock(p.sunrise));
+      setText('t-set', clock(p.sunset));
+      setText('t-rahu', range(p.rahuKaal));
+
+      // verdict, the same rules as the app's "now" card
+      const s = P.nowStatus(p, now);
+      const v = document.getElementById('verdict');
+      let title = t.vNeutral, line = '', tone = 'neutral';
+      if (s.active) { tone = 'avoid'; title = fill(t.vAvoid, { name: t[AVOID[s.active.kind]] }); line = fill(t.vUntil, { time: clock(s.active.end) }); }
+      else if (s.slot) {
+        const q = P.names.CHOGHADIYA[s.slot.kind].quality;
+        tone = q === 'good' ? 'good' : q === 'avoid' ? 'avoid' : 'neutral';
+        title = q === 'good' ? t.vGood : q === 'avoid' ? fill(t.vAvoid, { name: nm(P.names.CHOGHADIYA[s.slot.kind]) + (lang === 'hi' ? ' चौघड़िया' : ' choghadiya') }) : t.vNeutral;
+        const until = s.next && s.next.start < s.slot.end && q !== 'avoid' ? s.next.start : s.slot.end;
+        line = fill(t.vChog, { chog: nm(P.names.CHOGHADIYA[s.slot.kind]), time: clock(until) });
+      }
+      if (s.next) line += ` · ${fill(t.vNext, { name: t[AVOID[s.next.kind]], range: range(s.next) })}`;
+      else if (!s.active) line += ` · ${t.vDone}`;
+      if (v.className !== `verdict ${tone}`) v.className = `verdict ${tone}`;
+      setText('verdict-title', title);
+      setText('verdict-line', line);
+
+      renderRuler(p, now);
+      renderFestivals(today);
+    } catch (e) {
+      console.warn('panchang', e);
+    }
+  }
+
+  const SUN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>';
+  function renderRuler(p, now) {
+    // Today's windows in time order, each with a plain "Auspicious" / "Avoid" tag, so the day reads top to bottom.
+    const t = T[lang];
+    setText('ruler-city', nm(city));
+    const rows = [
+      { kind: 'good', name: t.brahma, r: p.brahmaMuhurat },
+      { kind: 'sun', name: t.sunrise, at: p.sunrise },
+      { kind: 'avoid', name: t.rahu, r: p.rahuKaal },
+      { kind: 'avoid', name: t.yama, r: p.yamaganda },
+      { kind: 'avoid', name: t.gulika, r: p.gulika },
+      p.abhijit && { kind: 'good', name: t.abhijit, r: p.abhijit },
+      { kind: 'sun', name: t.sunset, at: p.sunset },
+    ].filter(Boolean).map((x) => ({ ...x, start: x.r ? x.r.start : x.at, end: x.r ? x.r.end : x.at }))
+     .sort((a, b) => a.start - b.start || a.end - b.end);
+    const n = now.getTime();
+    let nowPlaced = false;
+    const nowLine = () => `<li class="now-line"><i></i><span>${t.now} · ${clock(now)}</span></li>`;
+    const html = [];
+    for (const x of rows) {
+      const on = x.r && n >= x.start.getTime() && n < x.end.getTime();
+      if (!nowPlaced && !on && n < x.start.getTime() && n > rows[0].start.getTime()) { html.push(nowLine()); nowPlaced = true; }
+      if (on) nowPlaced = true;
+      const past = n >= x.end.getTime() && !on;
+      const tag = x.kind === 'good' ? t.tagGood : x.kind === 'avoid' ? t.tagAvoid : '';
+      html.push(`<li class="${x.kind}${past ? ' past' : ''}${on ? ' on' : ''}"><span class="mk">${x.kind === 'sun' ? SUN_ICON : '<i></i>'}</span>` +
+        `<span class="nm">${x.name}</span>${tag ? `<span class="tag">${tag}</span>` : ''}` +
+        `<span class="tm">${x.r ? range(x.r) : clock(x.at)}${on ? `<b>· ${t.now}</b>` : ''}</span></li>`);
+    }
+    const out = html.join('');
+    const el = document.getElementById('day-list');
+    if (el.dataset.html !== out) { el.innerHTML = out; el.dataset.html = out; }
+  }
+
+  function renderFestivals(today) {
+    const t = T[lang];
+    document.getElementById('fest-title').textContent = fill(t.fTitle, { city: nm(city) });
+    const list = P.upcomingFestivals(today, city, { days: 150, majorOnly: true }).filter((f) => f.kind !== 'purnima' && f.kind !== 'amavasya').slice(0, 4);
+    document.getElementById('fest-list').innerHTML = list.map((f) => {
+      const days = P.diffDays(today, f.date);
+      const when = days === 0 ? t.today : days === 1 ? t.tomorrow : fill(t.inDays, { n: days });
+      return `<li><div class="fest-date"><b>${f.date.d}</b><span>${nm(P.names.GREG_MONTH[f.date.m - 1])}<br>${nm(P.names.WEEKDAY[P.weekday(f.date)])}</span></div><div class="fest-name">${nm(f.name)}</div><div class="fest-when">${when}</div></li>`;
+    }).join('');
+  }
+
+  // ---------- the sky ----------
+  const HOURS = ['night', 'predawn', 'dawn', 'day', 'dusk'];
+  const layers = Object.fromEntries(HOURS.map((h) => [h, document.querySelector('.h-' + h)]));
+  const sun = document.getElementById('sun');
+  const top = document.getElementById('top');
+  const marks = [...document.querySelectorAll('main > section, footer')].map((el) => ({ el, sky: el.dataset.sky }));
+
+  function skyAt() {
+    // Blend between the two sections around the middle of the screen.
+    const mid = innerHeight * 0.55;
+    let i = 0;
+    for (let k = 0; k < marks.length; k++) { if (marks[k].el.getBoundingClientRect().top <= mid) i = k; }
+    const cur = marks[i], next = marks[Math.min(i + 1, marks.length - 1)];
+    const w = Object.fromEntries(HOURS.map((h) => [h, 0]));
+    // Hold the section's hour; hand over only as the next section rises through the lower part of the
+    // screen, so the end of a long section (and whatever text sits there) keeps its own sky.
+    const band = innerHeight * 0.4;
+    const ease = next === cur ? 0 : Math.max(0, Math.min(1, (mid + band - next.el.getBoundingClientRect().top) / band));
+    w[cur.sky] += 1 - ease; w[next.sky] += ease;
+    return { w, pos: i + ease };
+  }
+  let ticking = false;
+  function paint() {
+    ticking = false;
+    const { w, pos } = skyAt();
+    // Two half-transparent layers would let the dark ground show through mid-blend, so the lower of the
+    // two hours stays fully opaque and only the upper one fades.
+    const on = HOURS.filter((h) => w[h] > 0.001).sort((x, y) => HOURS.indexOf(x) - HOURS.indexOf(y));
+    for (const h of HOURS) layers[h].style.opacity = h === on[0] ? '1' : on.includes(h) ? String(w[h]) : '0';
+    top.classList.toggle('solid', scrollY > 30);
+    // The sun climbs from the dawn section (index 2) to the trust strip, and sets in dusk.
+    const W = innerWidth, H = innerHeight;
+    const narrow = W < 760;
+    const sp = Math.max(0, Math.min(1, (pos - 1.4) / 4));
+    // Wide screens: the sun crosses the whole sky. Phones: it rises and sets along the right edge,
+    // half tucked out of view, so it never sits behind a line of text.
+    const sx = (narrow ? W - sun.offsetWidth * 0.22 : W * (0.08 + 0.84 * sp)) - sun.offsetWidth / 2;
+    const sy = H * (0.85 - (narrow ? 0.7 : 0.62) * Math.sin(Math.PI * sp)) - sun.offsetHeight / 2;
+    const sunOn = Math.min(1, Math.max(0, w.dawn + w.day + w.dusk * 0.85));
+    sun.style.transform = `translate3d(${sx}px, ${sy}px, 0)`;
+    sun.style.opacity = String(sunOn * (narrow ? 0.7 : 1));
+  }
+  const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(paint); } };
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('resize', onScroll);
+
+  // ---------- soft reveals (content is visible at rest; this only lifts it into place) ----------
+  if (!reduce && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    document.querySelectorAll('.rise').forEach((el) => io.observe(el));
+  } else document.querySelectorAll('.rise').forEach((el) => el.classList.add('in'));
+
+  // ---------- the closing diya: the same lamp as the hero ----------
+  document.getElementById('diya-big').innerHTML = document.querySelector('.hero .diya').outerHTML;
+
+  // ---------- start ----------
+  if (P) { city = P.getCity(pickDefaultCity()); }
+  applyLang();
+  paint();
+  setInterval(renderLive, 60000);
+})();
+</script>
